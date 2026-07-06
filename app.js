@@ -5398,32 +5398,39 @@ var DEFERRED_INSTALL_PROMPT=null;
 function isAlreadyInstalled(){
   return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true;
 }
+function showInstallBanners(){
+  if(isAlreadyInstalled() || sessionStorage.getItem('vc_install_dismissed'))return;
+  ['installBanner','authInstallBanner'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.classList.add('show');
+  });
+}
+function hideInstallBanners(){
+  ['installBanner','authInstallBanner'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el)el.classList.remove('show');
+  });
+}
 window.addEventListener('beforeinstallprompt',function(e){
   e.preventDefault();
   DEFERRED_INSTALL_PROMPT=e;
-  if(!isAlreadyInstalled() && !sessionStorage.getItem('vc_install_dismissed')){
-    var banner=document.getElementById('installBanner');
-    if(banner)banner.classList.add('show');
-  }
+  showInstallBanners();
 });
 window.addEventListener('appinstalled',function(){
   DEFERRED_INSTALL_PROMPT=null;
-  var banner=document.getElementById('installBanner');
-  if(banner)banner.classList.remove('show');
+  hideInstallBanners();
   toast('✅ Verticore installed!');
 });
 function installApp(){
   if(!DEFERRED_INSTALL_PROMPT)return;
   DEFERRED_INSTALL_PROMPT.prompt();
-  DEFERRED_INSTALL_PROMPT.userChoice.then(function(){
+  DEFERRED_INSTALL_PROMPT.userChoice.then(function(choice){
     DEFERRED_INSTALL_PROMPT=null;
-    var banner=document.getElementById('installBanner');
-    if(banner)banner.classList.remove('show');
+    if(choice&&choice.outcome==='accepted')hideInstallBanners();
   });
 }
 function dismissInstallBanner(){
-  var banner=document.getElementById('installBanner');
-  if(banner)banner.classList.remove('show');
+  hideInstallBanners();
   sessionStorage.setItem('vc_install_dismissed','1');
 }
 
