@@ -4193,14 +4193,23 @@ function renderCcStats(){
     return '<div class="glass-stat" style="animation-delay:'+(i*0.05).toFixed(2)+'s"><div class="gs-value">'+s.value+'</div><div class="gs-label">'+s.label+'</div></div>';
   }).join('');
 }
+function getNextContactSerial(){
+  // Serial numbers are permanent once assigned — computed as (highest existing + 1),
+  // never reused even after a contact is deleted, so S.No. can be trusted for tracking.
+  var maxSno=0;
+  CC_CONTACTS.forEach(function(c){var s=parseInt((c.custom_fields||{}).sno)||0;if(s>maxSno)maxSno=s;});
+  return Promise.resolve(maxSno+1);
+}
 function addColdContact(){
   var name=document.getElementById('ccName').value.trim();
   var category=document.getElementById('ccCategory').value;
   var phone=document.getElementById('ccPhone').value.trim();
   if(!name||!phone){toast('Name and phone are required.',true);return;}
-  var body={title:'Cold Contact',custom_fields:{name:name,category:category,phone:phone,source:'manual'}};
-  body.tenant_id=CTX.tenant_id;body.created_by=CTX.user_id;body.type='cold_contact';
-  postTable('activities',body,true).then(function(){
+  getNextContactSerial().then(function(serial){
+    var body={title:'Cold Contact',custom_fields:{sno:serial,name:name,category:category,phone:phone,source:'manual'}};
+    body.tenant_id=CTX.tenant_id;body.created_by=CTX.user_id;body.type='cold_contact';
+    return postTable('activities',body,true);
+  }).then(function(){
     toast('✅ Contact added');
     document.getElementById('ccName').value='';document.getElementById('ccPhone').value='';
     initColdCallingView();
@@ -4208,28 +4217,24 @@ function addColdContact(){
 }
 function renderColdContacts(){
   var q=(document.getElementById('ccSearch').value||'').trim().toLowerCase();
+  var checkedCats=Array.from(document.querySelectorAll('.cc-filter-cb:checked')).map(function(cb){return cb.value;});
   var rows=CC_CONTACTS.filter(function(c){
     var cf=c.custom_fields||{};
+    if(checkedCats.length && checkedCats.indexOf(cf.category)===-1)return false;
     if(!q)return true;
-    return ((cf.name||'')+' '+(cf.phone||'')).toLowerCase().indexOf(q)>-1;
+    return ((cf.name||'')+' '+(cf.phone||'')+' '+(cf.sno||'')).toLowerCase().indexOf(q)>-1;
   });
   var el=document.getElementById('ccContactsList');
-  if(!rows.length){el.innerHTML='<div class="empty-hint">No contacts yet — add manually or import.</div>';return;}
-  var today=new Date().toISOString().slice(0,10);
+  if(!rows.length){el.innerHTML='<div class="empty-hint">No contacts match.</div>';return;}
   el.innerHTML=rows.map(function(c){
     var cf=c.custom_fields||{};
-    var overdue=cf.nextFollowUp && cf.nextFollowUp<today;
-    return '<div class="att-row">'
-      +'<div><div class="p-name">'+escapeHtml(cf.name||'—')
-        +(cf.leadStatus?'<span class="p-roll">'+cf.leadStatus+'</span>':'')
-        +(cf.source?'<span class="p-roll">'+cf.source+'</span>':'')+'</div>'
-      +'<div class="p-meta">'+escapeHtml(cf.phone||'')+' · '+escapeHtml(cf.category||'')
-        +(cf.nextFollowUp?(' · <span style="color:'+(overdue?'var(--err)':'var(--ink-3)')+';">Follow-up: '+cf.nextFollowUp+'</span>'):'')+'</div></div>'
-      +'<div class="att-status-group">'
-      +'<button class="btn btn-ghost btn-sm" style="width:auto;" onclick="openContactEditModal(\''+c.id+'\')">📋 Dashboard</button>'
-      +'<a class="btn btn-ghost btn-sm" href="https://wa.me/'+(cf.phone||'').replace(/[^0-9]/g,'')+'" target="_blank" style="text-decoration:none;width:auto;">💬</a>'
-      +'<button class="btn btn-primary btn-sm" style="width:auto;" onclick="openCallSession(\''+c.id+'\')">📞 Call</button>'
-      +'</div></div>';
+    return '<div class="cc-card">'
+      +'<span class="cc-sno">'+(cf.sno||'—')+'</span>'
+      +'<div class="cc-namephone"><div class="p-name">'+escapeHtml(cf.name||'—')+'</div><div class="p-meta">'+escapeHtml(cf.phone||'')+'</div></div>'
+      +'<a class="cc-icon-btn" href="https://wa.me/'+(cf.phone||'').replace(/[^0-9]/g,'')+'" target="_blank" title="WhatsApp">💬</a>'
+      +'<a class="cc-icon-btn" href="tel:'+(cf.phone||'')+'" title="Call">📞</a>'
+      +'<span class="cc-icon-btn" onclick="openContactEditModal(\''+c.id+'\')" title="Dashboard">📋</span>'
+      +'</div>';
   }).join('');
 }
 var CC_ACTIVE_LEAD_STATUS='';
@@ -4264,17 +4269,31 @@ function renderContactGallery(){
   var el=document.getElementById('ccGalleryGrid');
   if(!CC_GALLERY_ITEMS.length){el.innerHTML='<div class="empty-hint">No files yet.</div>';return;}
   el.innerHTML=CC_GALLERY_ITEMS.map(function(item,i){
-    var inner;
-    if(item.kind==='image')inner='<img src="'+item.dataUrl+'">';
-    else if(item.kind==='video')inner='<video src="'+item.dataUrl+'" muted></video>';
-    else if(item.kind==='audio')inner='🎙️';
-    else inner='📄';
-    return '<div class="gallery-item" title="'+escapeHtml(item.name||'')+'">'+inner+'<span class="gi-remove" onclick="removeGalleryItem('+i+')">✕</span></div>';
+    var placeholder=item.kind==='audio'?'🎙️':(item.kind==='video'?'🎬':(item.kind==='image'?'🖼️':'📄'));
+    return '<div class="gallery-item" id="ccGalleryItem'+i+'" title="'+escapeHtml(item.name||'')+' — '+(item.heading||'')+'">'+placeholder+'<span class="gi-remove" onclick="removeGalleryItem('+i+')">✕</span></div>';
   }).join('');
+  // Thumbnails load from phone storage (IndexedDB) in the background —
+  // the actual file bytes never touch Supabase, only this metadata does.
+  CC_GALLERY_ITEMS.forEach(function(item,i){
+    if(item.kind!=='image'&&item.kind!=='video')return;
+    cacheGet(item.localKey).then(function(cached){
+      if(!cached)return;
+      var box=document.getElementById('ccGalleryItem'+i);
+      if(!box)return;
+      var tag=item.kind==='image'?'img':'video';
+      box.innerHTML='<'+tag+' src="'+cached+'"'+(tag==='video'?' muted':'')+'><span class="gi-remove" onclick="removeGalleryItem('+i+')">✕</span>';
+    }).catch(function(){});
+  });
 }
 function removeGalleryItem(idx){
+  var item=CC_GALLERY_ITEMS[idx];
+  if(item&&item.localKey)cacheDelete(item.localKey);
   CC_GALLERY_ITEMS.splice(idx,1);
   renderContactGallery();
+}
+function nowDateTimeHeading(name){
+  var d=new Date();
+  return {date:d.toISOString().slice(0,10),time:d.toTimeString().slice(0,5),heading:name};
 }
 function handleContactGalleryUpload(e){
   var f=e.target.files[0];
@@ -4282,7 +4301,10 @@ function handleContactGalleryUpload(e){
   var kind=f.type.indexOf('image/')===0?'image':(f.type.indexOf('video/')===0?'video':'file');
   var reader=new FileReader();
   reader.onload=function(){
-    CC_GALLERY_ITEMS.push({kind:kind,name:f.name,dataUrl:reader.result});
+    var localKey='ccmedia:'+CTX.tenant_id+':'+Date.now()+':'+Math.random().toString(36).slice(2);
+    cacheSet(localKey,reader.result); // heavy bytes → phone storage (IndexedDB) only
+    var meta=nowDateTimeHeading(f.name);
+    CC_GALLERY_ITEMS.push({kind:kind,name:f.name,localKey:localKey,date:meta.date,time:meta.time,heading:'Attachment: '+f.name});
     renderContactGallery();
   };
   reader.readAsDataURL(f);
@@ -4303,7 +4325,11 @@ function toggleVoiceNoteRecording(){
       var blob=new Blob(CC_AUDIO_CHUNKS,{type:'audio/webm'});
       var reader=new FileReader();
       reader.onload=function(){
-        CC_GALLERY_ITEMS.push({kind:'audio',name:'Voice note '+new Date().toLocaleTimeString(),dataUrl:reader.result});
+        var name='Voice note '+new Date().toLocaleTimeString();
+        var localKey='ccmedia:'+CTX.tenant_id+':'+Date.now()+':'+Math.random().toString(36).slice(2);
+        cacheSet(localKey,reader.result); // heavy audio bytes → phone storage only
+        var meta=nowDateTimeHeading(name);
+        CC_GALLERY_ITEMS.push({kind:'audio',name:name,localKey:localKey,date:meta.date,time:meta.time,heading:name});
         renderContactGallery();
       };
       reader.readAsDataURL(blob);
@@ -4407,13 +4433,17 @@ function importContactRows(rows,progEl){
   }
   var BATCH_SIZE=300;
   var batches=[];
-  for(var i=0;i<valid.length;i+=BATCH_SIZE){
-    batches.push(valid.slice(i,i+BATCH_SIZE).map(function(row){
-      return {tenant_id:CTX.tenant_id,created_by:CTX.user_id,type:'cold_contact',title:'Cold Contact',
-        custom_fields:{name:row.name,phone:row.phone,category:row.category||'Students/Parents',source:'imported'}};
-    }));
-  }
+  getNextContactSerial().then(function(startSno){
+    for(var i=0;i<valid.length;i+=BATCH_SIZE){
+      batches.push(valid.slice(i,i+BATCH_SIZE).map(function(row,idx){
+        return {tenant_id:CTX.tenant_id,created_by:CTX.user_id,type:'cold_contact',title:'Cold Contact',
+          custom_fields:{sno:startSno+i+idx,name:row.name,phone:row.phone,category:row.category||'Students/Parents',source:'imported'}};
+      }));
+    }
+    runImportBatches();
+  });
   var created=0,failedBatches=0;
+  function runImportBatches(){nextBatch(0);}
   function nextBatch(i){
     if(i>=batches.length){
       var summary='Done — '+created+' imported, '+skipped+' skipped'+(failedBatches?', '+failedBatches+' batch(es) failed':'')+'.';
@@ -4638,15 +4668,31 @@ function downloadCallReport(){
   document.getElementById('printArea').innerHTML=html;
   setTimeout(function(){window.print();},80);
 }
-function shareCallReportWhatsApp(){
+function generateAiCallSummary(){
   var data=buildCallReportData();
   if(!data.length){toast('Select at least one contact.',true);return;}
-  var lines=[CTX.company_name,'Cold Calling Report — '+data.length+' contact(s)',''];
-  data.forEach(function(d){
-    var lastCall=d.calls[0];
-    lines.push('• '+d.cf.name+' — '+(lastCall?((lastCall.custom_fields||{}).outcome||'called'):'not called yet'));
-  });
-  window.open('https://wa.me/?text='+encodeURIComponent(lines.join('\n')),'_blank');
+  var raw=data.map(function(d){
+    var calls=d.calls.map(function(c){var cf=c.custom_fields||{};return cf.outcome+(cf.notes?' — '+cf.notes:'');}).join('; ');
+    return d.cf.name+' ('+(d.cf.category||'')+', '+(d.cf.leadStatus||'no status')+'): '+(calls||'not called yet')+(d.cf.notes?'. Notes: '+d.cf.notes:'');
+  }).join('\n');
+  var wrap=document.getElementById('crAiSummaryWrap');
+  var textarea=document.getElementById('crAiSummaryText');
+  wrap.style.display='block';
+  textarea.value='Generating…';
+  callGeminiAssist('Write a short, friendly WhatsApp-ready summary of this cold-calling report for '+CTX.company_name+'. Extract the key outcomes, don\'t just list raw data:\n\n'+raw)
+    .then(function(text){textarea.value=text;})
+    .catch(function(){
+      // Fall back to a plain (non-AI) summary rather than blocking sharing entirely.
+      var lines=[CTX.company_name,'Cold Calling Report — '+data.length+' contact(s)',''];
+      data.forEach(function(d){var lastCall=d.calls[0];lines.push('• '+d.cf.name+' — '+(lastCall?((lastCall.custom_fields||{}).outcome||'called'):'not called yet'));});
+      textarea.value=lines.join('\n');
+      toast('AI summary unavailable — plain summary shown instead.',true);
+    });
+}
+function sendCallReportWhatsApp(){
+  var text=document.getElementById('crAiSummaryText').value.trim();
+  if(!text){toast('Generate a summary first.',true);return;}
+  window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank');
 }
 
 // ------------------------------------------------------------
@@ -5383,6 +5429,13 @@ function cacheSet(key,value){
     var tx=IDB.transaction('cache','readwrite');
     tx.objectStore('cache').put({key:key,value:value,ts:Date.now()});
   }catch(e){/* ignore cache write failures — Supabase is still authoritative */}
+}
+function cacheDelete(key){
+  if(!IDB)return;
+  try{
+    var tx=IDB.transaction('cache','readwrite');
+    tx.objectStore('cache').delete(key);
+  }catch(e){/* non-fatal */}
 }
 function cacheKeyFor(module){return module+':'+(CTX&&CTX.tenant_id||'anon');}
 

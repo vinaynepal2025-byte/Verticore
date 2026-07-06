@@ -242,6 +242,14 @@ a{color:inherit}
 .att-status-group{display:flex;gap:6px;margin-left:auto}
 .att-chip{font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;cursor:pointer;border:1px solid var(--line);color:var(--ink-3);user-select:none}
 .att-chip.active{background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent);border-color:var(--accent)}
+
+/* ---- Cold Calling: compact search result card ---- */
+.cc-card{display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid var(--line)}
+.cc-card:last-child{border-bottom:none}
+.cc-sno{font-size:11px;font-weight:700;color:var(--ink-3);background:var(--paper);border-radius:6px;padding:3px 7px;flex:0 0 auto;min-width:22px;text-align:center}
+.cc-namephone{flex:1;min-width:0}
+.cc-icon-btn{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--paper);text-decoration:none;cursor:pointer;flex:0 0 auto;transition:transform .12s}
+.cc-icon-btn:active{transform:scale(0.9)}
 .att-chip.p.active{background:rgba(13,143,107,0.15);color:var(--ok);border-color:var(--ok)}
 .att-chip.a.active{background:rgba(192,54,44,0.15);color:var(--err);border-color:var(--err)}
 .att-chip.l.active{background:rgba(184,114,10,0.15);color:var(--warn);border-color:var(--warn)}
@@ -1459,6 +1467,12 @@ a{color:inherit}
       <div class="rail-card" style="margin-bottom:16px;">
         <div class="rail-card-body">
           <input class="search-input" id="ccSearch" placeholder="Search by name or phone…" oninput="renderColdContacts()" style="margin-bottom:10px;">
+          <div id="ccFilterChecks" class="rp-actions" style="flex-wrap:wrap;margin-bottom:10px;">
+            <label class="fld-hint"><input type="checkbox" class="cc-filter-cb" value="Students/Parents" checked onchange="renderColdContacts()" style="width:auto;"> Students/Parents</label>
+            <label class="fld-hint"><input type="checkbox" class="cc-filter-cb" value="Counsellors/Parents" checked onchange="renderColdContacts()" style="width:auto;"> Counsellors/Parents</label>
+            <label class="fld-hint"><input type="checkbox" class="cc-filter-cb" value="Youtubers" checked onchange="renderColdContacts()" style="width:auto;"> Youtubers</label>
+            <label class="fld-hint"><input type="checkbox" class="cc-filter-cb" value="Friends/Relatives/Anonymous" checked onchange="renderColdContacts()" style="width:auto;"> Friends/Relatives/Anonymous</label>
+          </div>
           <div id="ccContactsList"></div>
         </div>
       </div>
@@ -2095,7 +2109,12 @@ By signing below, you commit to abide by the institution's code of conduct, acad
       <div id="crSelectionList" style="max-height:280px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 10px;margin-bottom:14px;"></div>
       <div class="rp-actions">
         <button class="btn btn-primary btn-sm" onclick="downloadCallReport()">⬇️ Download Report</button>
-        <button class="btn btn-ghost btn-sm" onclick="shareCallReportWhatsApp()">💬 WhatsApp Summary</button>
+        <button class="btn btn-ghost btn-sm" onclick="generateAiCallSummary()">✨ AI Smart Summary</button>
+      </div>
+      <div id="crAiSummaryWrap" style="display:none;margin-top:14px;">
+        <label class="fld-hint">Review before sending — edit freely</label>
+        <textarea id="crAiSummaryText" class="ai-textarea" style="min-height:110px;"></textarea>
+        <button class="btn btn-primary" style="margin-top:8px;" onclick="sendCallReportWhatsApp()">💬 Send via WhatsApp</button>
       </div>
     </div>
   </div>
