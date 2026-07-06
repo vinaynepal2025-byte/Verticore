@@ -1,0 +1,2405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0f1115">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Verticore">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" sizes="96x96" href="./icon-96.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>Verticore</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   VERTICORE DESIGN SYSTEM
+   Instrument-panel aesthetic: cool neutral base (not warm-cream,
+   not near-black neon) — this is an operational SaaS dashboard,
+   not a marketing page. Space Grotesk for display, Inter for body.
+   Signature: a 4px accent-color rail on every card/section top —
+   this rail's color IS the tenant's brand color, sourced live from
+   tenant_config. It's the white-label mechanism made visible: the
+   one thing that changes per tenant is the one thing you always see.
+   ============================================================ */
+:root{
+  --ink:#12141a; --ink-2:#40434e; --ink-3:#767a86;
+  --paper:#f6f7f9; --paper-2:#ffffff; --line:#e2e4e9;
+  --accent:#2563eb; --accent-2:#7c3aed;
+  --ok:#0d8f6b; --warn:#b8720a; --err:#c0362c;
+  --r:14px; --r-sm:8px;
+  --shadow:0 1px 2px rgba(18,20,26,0.04), 0 8px 24px rgba(18,20,26,0.06);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{
+  content:'';position:fixed;inset:0;z-index:-2;
+  background:
+    radial-gradient(circle at 10% 15%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 45%),
+    radial-gradient(circle at 90% 10%, color-mix(in srgb, var(--accent-2) 12%, transparent), transparent 45%),
+    radial-gradient(circle at 30% 90%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 50%),
+    radial-gradient(circle at 85% 80%, color-mix(in srgb, var(--accent-2) 10%, transparent), transparent 50%),
+    var(--paper);
+}
+h1,h2,h3,.display{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.01em}
+input,select,button,textarea{font-family:inherit;font-size:14px}
+a{color:inherit}
+
+/* ---- Rail card: the signature element ---- */
+.rail-card{position:relative;background:rgba(255,255,255,0.42);backdrop-filter:blur(22px) saturate(180%);-webkit-backdrop-filter:blur(22px) saturate(180%);border:1px solid rgba(255,255,255,0.55);border-radius:var(--r);box-shadow:0 8px 32px rgba(18,20,26,0.10),inset 0 1px 0 rgba(255,255,255,0.9),inset 0 -1px 0 rgba(255,255,255,0.15);overflow:hidden;transition:box-shadow .2s,transform .15s}
+.rail-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.95),transparent);pointer-events:none}
+.rail-card:active{transform:scale(0.995)}
+.rail-card::before{content:'';position:absolute;top:0;left:0;right:0;height:4px;background:var(--accent);border-radius:var(--r) var(--r) 0 0}
+.rail-card-body{padding:24px}
+
+/* ---- Layout shells ---- */
+.screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.auth-wrap{width:100%;max-width:420px}
+.brand-row{display:flex;align-items:center;gap:12px;margin-bottom:28px}
+.brand-logo{width:44px;height:44px;border-radius:10px;object-fit:contain;background:var(--paper);border:1px solid var(--line);flex:0 0 auto}
+.brand-logo.ph{display:flex;align-items:center;justify-content:center;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:18px;color:#fff}
+.brand-name{font-size:19px;font-weight:700}
+.brand-sub{font-size:12px;color:var(--ink-3);margin-top:1px}
+
+.tabs{display:flex;gap:4px;background:var(--paper);border-radius:10px;padding:3px;margin-bottom:18px}
+.oauth-divider{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--ink-3);margin-bottom:14px}
+.oauth-divider::before,.oauth-divider::after{content:'';flex:1;height:1px;background:var(--line)}
+.tab{flex:1;text-align:center;padding:8px;border-radius:8px;font-weight:600;font-size:13px;color:var(--ink-3);cursor:pointer;user-select:none;transition:all .15s}
+.tab.active{background:rgba(255,255,255,0.85);color:var(--ink);box-shadow:0 2px 10px color-mix(in srgb, var(--accent) 18%, transparent),0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent)}
+
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:6px}
+.fld input,.fld select{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper-2);color:var(--ink);outline:none;transition:border-color .15s}
+.fld input:focus,.fld select:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent)}
+.fld-hint{font-size:11px;color:var(--ink-3);margin-top:5px}
+.fld-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:10px 16px;border-radius:var(--r-sm);border:1px solid transparent;font-weight:600;font-size:13px;cursor:pointer;transition:all .15s;width:100%}
+.btn:active{transform:scale(0.97);box-shadow:0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent)}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 3px 14px color-mix(in srgb, var(--accent) 40%, transparent)}
+.btn-primary:hover{filter:brightness(1.08);box-shadow:0 4px 20px color-mix(in srgb, var(--accent) 55%, transparent)}
+.btn-primary:hover{filter:brightness(0.93)}
+.btn-primary:disabled{opacity:0.55;cursor:not-allowed}
+.btn-ghost{background:transparent;border-color:var(--line);color:var(--ink-2)}
+.btn-ghost:hover{background:var(--paper)}
+.btn-sm{width:auto;padding:7px 12px;font-size:12px}
+.btn-danger{background:transparent;border-color:var(--err);color:var(--err)}
+
+.msg{font-size:12px;border-radius:var(--r-sm);padding:9px 12px;margin-bottom:14px;display:none}
+.msg.err{display:block;background:rgba(192,54,44,0.08);color:var(--err);border:1px solid rgba(192,54,44,0.2)}
+.msg.ok{display:block;background:rgba(13,143,107,0.08);color:var(--ok);border:1px solid rgba(13,143,107,0.2)}
+
+.tenant-preview{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);background:var(--paper);border:1px solid var(--line);margin-top:8px;min-height:44px}
+.tenant-preview .tp-logo{width:28px;height:28px;border-radius:6px;object-fit:contain;background:#fff;border:1px solid var(--line);flex:0 0 auto}
+.tenant-preview .tp-text{font-size:12px;color:var(--ink-3)}
+.tenant-preview .tp-name{font-weight:700;color:var(--ink);font-size:13px}
+
+/* ---- App shell ---- */
+.app{display:none;min-height:100vh}
+.app.show{display:block}
+.topbar{background:var(--paper-2);border-bottom:1px solid var(--line);padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar-brand{display:flex;align-items:center;gap:10px}
+.topbar-brand .brand-logo{width:32px;height:32px;border-radius:8px}
+.topbar-org{font-weight:700;font-size:15px}
+.topbar-vertical{font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;background:var(--paper);border:1px solid var(--line);border-radius:5px;padding:2px 7px;margin-left:8px}
+.topbar-user{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--ink-2)}
+.role-chip{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:3px 9px;font-weight:600;font-size:11px;text-transform:capitalize}
+
+.shell-body{max-width:1080px;margin:0 auto;padding:28px 20px}
+.shell-title{font-size:22px;font-weight:700;margin:0 0 4px}
+.shell-sub{color:var(--ink-3);font-size:13px;margin:0 0 24px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:24px}
+.module-card{padding:18px}
+.module-card .m-icon{width:36px;height:36px;border-radius:9px;background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:12px}
+.module-card .m-name{font-weight:700;font-size:14px;margin-bottom:3px}
+.module-card .m-status{font-size:11px;color:var(--ink-3)}
+
+.settings-card{max-width:640px}
+.settings-card h3{font-size:15px;margin:0 0 4px}
+.settings-card p.desc{font-size:12px;color:var(--ink-3);margin:0 0 18px}
+.color-row{display:flex;align-items:center;gap:10px}
+.color-row input[type=color]{width:44px;height:38px;padding:2px;border:1px solid var(--line);border-radius:var(--r-sm);cursor:pointer}
+.logo-upload-row{display:flex;align-items:center;gap:12px}
+.logo-upload-preview{width:48px;height:48px;border-radius:10px;object-fit:contain;background:var(--paper);border:1px solid var(--line)}
+
+.footer-note{text-align:center;font-size:11px;color:var(--ink-3);margin-top:22px}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:100}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+.toast.err{background:var(--err)}
+.toast-action{margin-left:10px;font-weight:700;text-decoration:underline;cursor:pointer;color:#fff}
+
+@media (prefers-reduced-motion: reduce){*{transition:none !important}}
+
+/* ---- Nav tabs ---- */
+.topnav{display:flex;gap:4px;background:var(--paper);border-radius:10px;padding:3px}
+.topnav-item{padding:7px 14px;border-radius:8px;font-weight:600;font-size:12.5px;color:var(--ink-3);cursor:pointer;user-select:none;transition:all .15s}
+.topnav-item.active{background:var(--paper-2);color:var(--ink);box-shadow:var(--shadow)}
+.topnav-item:hover:not(.active){color:var(--ink-2)}
+
+/* ---- View header / toolbar ---- */
+.view-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px;gap:12px}
+.view-header-actions{display:flex;gap:8px;flex-shrink:0}
+.toolbar{margin-bottom:14px}
+.search-input{width:100%;max-width:340px;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper-2)}
+.empty-hint{color:var(--ink-3);font-size:13px;padding:8px 0}
+
+/* ---- People list ---- */
+.p-row{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);cursor:pointer;transition:background .1s}
+.p-row:last-child{border-bottom:none}
+.p-row:hover{background:var(--paper)}
+.p-avatar{width:34px;height:34px;border-radius:50%;background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:0 0 auto}
+.p-name{font-weight:600;font-size:13.5px}
+.p-meta{font-size:11.5px;color:var(--ink-3)}
+.p-status{margin-left:auto;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:3px 8px;border-radius:5px}
+.p-status.active{background:rgba(13,143,107,0.1);color:var(--ok)}
+.p-status.inactive{background:rgba(184,114,10,0.1);color:var(--warn)}
+.p-status.archived{background:var(--paper);color:var(--ink-3)}
+
+/* ---- Kanban ---- */
+.kanban{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px}
+.kanban-col{flex:0 0 260px;background:var(--paper);border-radius:var(--r);padding:10px}
+.kanban-col-head{font-size:12px;font-weight:700;color:var(--ink-2);text-transform:uppercase;letter-spacing:.03em;padding:4px 6px 10px;display:flex;justify-content:space-between}
+.kanban-count{background:var(--paper-2);border-radius:20px;padding:1px 8px;font-size:11px;color:var(--ink-3)}
+.kanban-card{background:var(--paper-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;box-shadow:var(--shadow);transition:transform .12s}
+.kanban-card:hover{transform:translateY(-1px)}
+.kanban-card .k-title{font-weight:600;font-size:12.5px;margin-bottom:3px}
+.kanban-card .k-person{font-size:11px;color:var(--ink-3)}
+.kanban-card .k-due{font-size:10.5px;color:var(--warn);margin-top:5px}
+.kanban-empty{font-size:11.5px;color:var(--ink-3);padding:10px 6px}
+
+/* ---- Modal ---- */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(18,20,26,0.45);align-items:center;justify-content:center;padding:20px;z-index:50}
+.modal-overlay.show{display:flex}
+.modal-card{width:100%;max-width:440px;max-height:88vh;overflow-y:auto}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.modal-head h3{margin:0;font-size:15px}
+.modal-close{cursor:pointer;color:var(--ink-3);font-size:15px;padding:2px 6px}
+.modal-close:hover{color:var(--ink)}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.modal-actions .btn{width:auto}
+
+/* ---- Academic / Results additions ---- */
+.modal-section-head{display:flex;align-items:center;justify-content:space-between;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--ink-3);margin:18px 0 8px;padding-top:14px;border-top:1px solid var(--line)}
+.marks-row{display:grid;grid-template-columns:1fr 70px 70px 70px 28px;gap:6px;align-items:center;margin-bottom:6px}
+.marks-row input{padding:7px 8px;font-size:12.5px}
+.marks-row .mr-remove{cursor:pointer;color:var(--ink-3);text-align:center;font-size:13px}
+.marks-row .mr-remove:hover{color:var(--err)}
+.marks-head{display:grid;grid-template-columns:1fr 70px 70px 70px 28px;gap:6px;font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.02em;margin-bottom:5px}
+.marks-summary{font-size:12.5px;font-weight:600;margin-top:8px;padding:8px 10px;background:var(--paper);border-radius:var(--r-sm);display:flex;justify-content:space-between}
+.pf-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;text-transform:uppercase}
+.pf-badge.pass{background:rgba(13,143,107,0.12);color:var(--ok)}
+.pf-badge.fail{background:rgba(192,54,44,0.12);color:var(--err)}
+.p-roll{font-size:11px;color:var(--ink-3);background:var(--paper);padding:1px 7px;border-radius:5px;margin-left:6px}
+
+/* ---- Results view ---- */
+.results-layout{display:flex;gap:16px;flex-wrap:wrap}
+.result-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line);cursor:pointer}
+.result-row:last-child{border-bottom:none}
+.result-row:hover{background:var(--paper)}
+.result-row.active{background:color-mix(in srgb, var(--accent) 8%, transparent)}
+.rp-head{display:flex;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.rp-avatar{width:52px;height:52px;border-radius:50%;background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;flex:0 0 auto}
+.rp-name{font-size:17px;font-weight:700}
+.rp-meta{font-size:11.5px;color:var(--ink-3)}
+.rp-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:14px}
+.rp-table th{text-align:left;color:var(--ink-3);font-weight:600;padding:5px 0;border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase}
+.rp-table td{padding:6px 0;border-bottom:1px solid var(--line)}
+.rp-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.rp-actions .btn{width:auto}
+.analysis-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:10px}
+.chart-label{font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px}
+@media (max-width:640px){.analysis-grid{grid-template-columns:1fr}}
+
+/* ---- Library ---- */
+.lib-table{width:100%;border-collapse:collapse;font-size:12.5px}
+.lib-table th{text-align:left;padding:10px 14px;color:var(--ink-3);font-weight:600;font-size:10.5px;text-transform:uppercase;border-bottom:1px solid var(--line)}
+.lib-table td{padding:9px 14px;border-bottom:1px solid var(--line)}
+.lib-table tr:last-child td{border-bottom:none}
+.sig-pad-wrap{border:1px solid var(--line);border-radius:var(--r-sm);background:#fff;margin-bottom:8px}
+.sig-pad-wrap canvas{width:100%;height:120px;display:block;touch-action:none;cursor:crosshair}
+.photo-drop{border:2px dashed var(--line);border-radius:var(--r-sm);padding:16px;text-align:center;font-size:12px;color:var(--ink-3);cursor:pointer;margin-bottom:10px}
+.photo-drop img{max-width:100%;max-height:140px;border-radius:8px;margin-top:8px}
+
+/* ---- Marketing Hub ---- */
+.mkt-card{padding:0;overflow:hidden;cursor:pointer}
+.mkt-thumb{width:100%;height:110px;object-fit:cover;background:var(--paper)}
+.mkt-thumb-ph{width:100%;height:110px;display:flex;align-items:center;justify-content:center;font-size:28px;background:var(--paper);color:var(--ink-3)}
+.mkt-card-body{padding:12px 14px}
+.mkt-caption{font-size:12px;font-weight:600;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mkt-meta{font-size:10.5px;color:var(--ink-3);display:flex;justify-content:space-between}
+.mkt-platform-chip{font-size:9.5px;font-weight:700;text-transform:uppercase;background:var(--paper);border-radius:5px;padding:2px 6px}
+.history-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.history-row:last-child{border-bottom:none}
+.history-row .h-name{font-weight:600}
+.history-row .h-stats{color:var(--ink-3);font-size:11.5px;display:flex;gap:12px}
+
+/* ---- Attendance ---- */
+.att-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--line)}
+.att-row:last-child{border-bottom:none}
+.att-status-group{display:flex;gap:6px;margin-left:auto}
+.att-chip{font-size:11px;font-weight:700;padding:5px 12px;border-radius:20px;cursor:pointer;border:1px solid var(--line);color:var(--ink-3);user-select:none}
+.att-chip.active{background:color-mix(in srgb, var(--accent) 15%, transparent);color:var(--accent);border-color:var(--accent)}
+.att-chip.p.active{background:rgba(13,143,107,0.15);color:var(--ok);border-color:var(--ok)}
+.att-chip.a.active{background:rgba(192,54,44,0.15);color:var(--err);border-color:var(--err)}
+.att-chip.l.active{background:rgba(184,114,10,0.15);color:var(--warn);border-color:var(--warn)}
+
+/* ---- Contact 360 Dashboard ---- */
+#ccLeadStatusTabs .tab[data-status="Hot"].active{background:#fee2e2;color:#c0362c}
+#ccLeadStatusTabs .tab[data-status="Warm"].active{background:#fef3c7;color:#b8720a}
+#ccLeadStatusTabs .tab[data-status="Cold"].active{background:#dbeafe;color:#2563eb}
+#ccLeadStatusTabs .tab[data-status="Interested"].active{background:#d1fae5;color:#0d8f6b}
+#ccLeadStatusTabs .tab[data-status="Not Interested"].active{background:var(--paper);color:var(--ink-3)}
+.gallery-item{width:72px;height:72px;border-radius:10px;background:var(--paper);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:22px;position:relative;overflow:hidden}
+.gallery-item img,.gallery-item video{width:100%;height:100%;object-fit:cover}
+.gallery-item .gi-remove{position:absolute;top:2px;right:2px;background:rgba(0,0,0,0.5);color:#fff;border-radius:50%;width:18px;height:18px;font-size:11px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+
+/* ---- Global Search ---- */
+.gsearch-trigger{display:flex;align-items:center;justify-content:space-between;margin:10px 12px 4px;padding:8px 10px;background:rgba(255,255,255,0.5);border:1px solid var(--line);border-radius:9px;font-size:12px;color:var(--ink-3);cursor:pointer;transition:all .15s}
+.gsearch-trigger:hover{background:var(--paper-2);color:var(--ink-2)}
+.gsearch-kbd{font-size:10px;font-weight:700;background:var(--paper);border-radius:5px;padding:2px 6px;border:1px solid var(--line)}
+.gsearch-overlay{display:none;position:fixed;inset:0;background:rgba(15,17,21,0.5);backdrop-filter:blur(4px);z-index:90;align-items:flex-start;justify-content:center;padding-top:10vh}
+.gsearch-overlay.show{display:flex;animation:gsFadeIn .15s ease}
+@keyframes gsFadeIn{from{opacity:0}to{opacity:1}}
+.gsearch-box{width:100%;max-width:600px;max-height:70vh;display:flex;flex-direction:column;
+  background:rgba(255,255,255,0.85);backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);
+  border:1px solid rgba(255,255,255,0.6);border-radius:18px;box-shadow:0 24px 70px rgba(0,0,0,0.35);overflow:hidden;
+  animation:gsSlideDown .18s cubic-bezier(.2,.9,.3,1)}
+@keyframes gsSlideDown{from{opacity:0;transform:translateY(-14px)}to{opacity:1;transform:translateY(0)}}
+.gsearch-input-row{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
+.gsearch-input-row input{flex:1;border:none;outline:none;background:transparent;font-size:16px;color:var(--ink)}
+.gsearch-esc{font-size:10px;font-weight:700;color:var(--ink-3);border:1px solid var(--line);border-radius:5px;padding:2px 6px;cursor:pointer}
+.gsearch-results{overflow-y:auto;padding:8px}
+.gsearch-group-label{font-size:10.5px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.03em;padding:8px 10px 4px}
+.gsearch-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer}
+.gsearch-item:hover,.gsearch-item.active{background:color-mix(in srgb, var(--accent) 10%, transparent)}
+.gsearch-item .gi-icon{width:30px;height:30px;border-radius:9px;background:var(--paper);display:flex;align-items:center;justify-content:center;font-size:15px;flex:0 0 auto}
+.gsearch-item .gi-text{min-width:0}
+.gsearch-item .gi-title{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gsearch-item .gi-title mark{background:color-mix(in srgb, var(--accent) 30%, transparent);color:inherit;border-radius:3px;padding:0 1px}
+.gsearch-item .gi-sub{font-size:11px;color:var(--ink-3)}
+.gsearch-footer{padding:8px 16px;border-top:1px solid var(--line);font-size:10.5px;color:var(--ink-3);text-align:center}
+.gsearch-empty{padding:30px 16px;text-align:center;color:var(--ink-3);font-size:13px}
+
+/* ---- Notice banner (dashboard) ---- */
+.notice-banner{position:relative;border-radius:14px;padding:14px 40px 14px 16px;margin-bottom:16px;color:#fff;box-shadow:0 8px 24px rgba(0,0,0,0.12)}
+.notice-banner .nb-title{font-weight:700;font-size:13.5px;margin-bottom:2px;}
+.notice-banner .nb-body{font-size:12.5px;opacity:0.92;}
+.notice-banner .nb-close{position:absolute;top:10px;right:12px;cursor:pointer;opacity:0.8;font-size:14px;}
+.notice-banner .nb-close:hover{opacity:1;}
+.notice-banner audio,.notice-banner video{margin-top:8px;max-width:100%;border-radius:8px;}
+
+/* ---- Report Builder ---- */
+.rb-check-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12.5px}
+.rb-check-row input{width:auto}
+.rb-custom-block{border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;margin-bottom:8px}
+.rb-custom-block input{margin-bottom:6px}
+.rb-preview-box{border:1px solid var(--line);border-radius:var(--r-sm);padding:16px;max-height:480px;overflow-y:auto;background:#fff}
+
+/* ---- Print-only marksheet ---- */
+.print-only{display:none}
+@media print{
+  body *{visibility:hidden}
+  #printArea,#printArea *{visibility:visible}
+  #printArea{display:block !important;position:absolute;top:0;left:0;width:100%;padding:24px}
+}
+
+/* ---- Global AI Assistant ---- */
+.ai-fab{position:fixed;bottom:24px;right:24px;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 6px 20px color-mix(in srgb, var(--accent) 45%, transparent),0 0 24px color-mix(in srgb, var(--accent) 35%, transparent);cursor:pointer;z-index:40;transition:all .2s}
+.ai-fab:hover{transform:scale(1.1);box-shadow:0 6px 26px color-mix(in srgb, var(--accent) 55%, transparent),0 0 34px color-mix(in srgb, var(--accent) 50%, transparent)}
+.ai-panel{position:fixed;bottom:0;right:0;top:0;width:100%;max-width:380px;background:rgba(255,255,255,0.68);backdrop-filter:blur(22px) saturate(160%);-webkit-backdrop-filter:blur(22px) saturate(160%);border-left:1px solid rgba(255,255,255,0.5);box-shadow:-8px 0 30px rgba(18,20,26,0.12);z-index:45;padding:20px;transform:translateX(100%);transition:transform .25s ease;overflow-y:auto}
+.ai-panel.show{transform:translateX(0)}
+.ai-panel-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.ai-panel-head h3{margin:0;font-size:15px}
+.ai-modes{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.ai-mode-btn{font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:20px;background:var(--paper);color:var(--ink-2);cursor:pointer;user-select:none;border:1px solid var(--line)}
+.ai-mode-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.ai-textarea{width:100%;min-height:120px;padding:10px 12px;border:1px solid rgba(255,255,255,0.6);border-radius:var(--r-sm);background:rgba(255,255,255,0.55);resize:vertical;margin-bottom:10px;font-family:inherit}
+.ai-output-label{font-size:11px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.03em;margin:14px 0 6px}
+.ai-output{font-size:13px;white-space:pre-wrap;background:rgba(255,255,255,0.55);border-radius:var(--r-sm);padding:12px;margin-bottom:10px;max-height:280px;overflow-y:auto}
+@media (max-width:480px){.ai-panel{max-width:100%}}
+
+/* ---- Dashboard: premium glassmorphism ---- */
+.dash-wrap{position:relative}
+.dash-mesh{
+  position:absolute;top:-28px;left:-20px;right:-20px;height:340px;z-index:-1;
+  background:
+    radial-gradient(circle at 15% 20%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 55%),
+    radial-gradient(circle at 85% 10%, color-mix(in srgb, var(--accent-2) 18%, transparent), transparent 50%),
+    radial-gradient(circle at 50% 60%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%);
+  filter:blur(40px);
+  border-radius:0 0 40px 40px;
+}
+.dash-section-head{font-size:12px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;margin:26px 0 12px}
+
+.glass-card{
+  background:rgba(255,255,255,0.55);
+  backdrop-filter:blur(18px) saturate(160%);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  border:1px solid rgba(255,255,255,0.6);
+  border-radius:18px;
+  box-shadow:0 8px 32px rgba(18,20,26,0.08), inset 0 1px 0 rgba(255,255,255,0.7);
+  padding:18px 20px;
+}
+
+.glass-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:8px}
+.glass-stat{
+  background:rgba(255,255,255,0.5);
+  backdrop-filter:blur(16px) saturate(160%);
+  -webkit-backdrop-filter:blur(16px) saturate(160%);
+  border:1px solid rgba(255,255,255,0.6);
+  border-radius:16px;
+  padding:16px 18px;
+  box-shadow:0 6px 24px rgba(18,20,26,0.06), inset 0 1px 0 rgba(255,255,255,0.7);
+  opacity:0;animation:dashFadeUp .5s ease forwards;
+}
+.glass-stat .gs-value{font-family:'Space Grotesk',sans-serif;font-size:26px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.glass-stat .gs-label{font-size:11.5px;color:var(--ink-3);margin-top:2px;font-weight:600}
+
+.quick-actions{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px}
+.qa-btn{
+  display:flex;align-items:center;gap:8px;padding:11px 16px;border-radius:14px;cursor:pointer;user-select:none;
+  background:rgba(255,255,255,0.5);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,0.6);font-weight:600;font-size:12.5px;color:var(--ink-2);
+  box-shadow:0 4px 16px rgba(18,20,26,0.06);transition:transform .15s,box-shadow .15s;
+  opacity:0;animation:dashFadeUp .5s ease forwards;
+}
+.qa-btn:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(18,20,26,0.1)}
+.qa-btn:active{transform:scale(0.96);box-shadow:0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent),0 4px 16px color-mix(in srgb, var(--accent) 30%, transparent)}
+.qa-btn .qa-icon{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;box-shadow:0 2px 8px color-mix(in srgb, var(--accent) 40%, transparent)}
+.qa-btn:nth-of-type(4n+1) .qa-icon{background:linear-gradient(135deg,#22c55e,#0d8f6b);box-shadow:0 2px 10px rgba(34,197,94,0.4)}
+.qa-btn:nth-of-type(4n+2) .qa-icon{background:linear-gradient(135deg,#3b82f6,#2563eb);box-shadow:0 2px 10px rgba(59,130,246,0.4)}
+.qa-btn:nth-of-type(4n+3) .qa-icon{background:linear-gradient(135deg,#f97316,#ea580c);box-shadow:0 2px 10px rgba(249,115,22,0.4)}
+.qa-btn:nth-of-type(4n+4) .qa-icon{background:linear-gradient(135deg,#a855f7,#7c3aed);box-shadow:0 2px 10px rgba(168,85,247,0.4)}
+
+.ai-suggest-card{margin-bottom:8px;opacity:0;animation:dashFadeUp .5s ease forwards;animation-delay:.15s}
+.ai-suggest-head{display:flex;align-items:center;justify-content:space-between;font-weight:700;font-size:13px;margin-bottom:10px}
+.ai-suggest-body-item{font-size:12.5px;padding:8px 0;border-bottom:1px solid rgba(18,20,26,0.06)}
+.ai-suggest-body-item:last-child{border-bottom:none}
+
+.module-card.glass-module{
+  background:rgba(255,255,255,0.5);backdrop-filter:blur(16px) saturate(160%);-webkit-backdrop-filter:blur(16px) saturate(160%);
+  border:1px solid rgba(255,255,255,0.6);box-shadow:0 6px 24px rgba(18,20,26,0.06), inset 0 1px 0 rgba(255,255,255,0.7);
+  opacity:0;animation:dashFadeUp .5s ease forwards;
+}
+.module-card.glass-module::before{display:none}
+.module-card.glass-module:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(18,20,26,0.12)}
+.module-card.glass-module .m-icon{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff}
+
+@keyframes dashFadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@media (prefers-reduced-motion: reduce){.glass-stat,.qa-btn,.ai-suggest-card,.module-card.glass-module{animation:none;opacity:1}}
+
+/* ---- Sidebar layout (enterprise SaaS standard) ---- */
+.app-layout{display:flex;min-height:100vh}
+.sidebar{
+  width:236px;flex:0 0 236px;margin:14px 0 14px 14px;background:rgba(255,255,255,0.4);backdrop-filter:blur(26px) saturate(180%);-webkit-backdrop-filter:blur(26px) saturate(180%);border:1px solid rgba(255,255,255,0.6);border-radius:22px;
+  box-shadow:0 8px 32px rgba(18,20,26,0.12),inset 0 1px 0 rgba(255,255,255,0.9);
+  display:flex;flex-direction:column;height:calc(100vh - 28px);position:sticky;top:14px;
+}
+.sidebar-brand{display:flex;align-items:center;gap:10px;padding:18px 16px;border-bottom:1px solid var(--line)}
+.sidebar-brand .brand-logo{width:34px;height:34px;border-radius:9px;flex:0 0 auto}
+.sidebar-brand-text{min-width:0}
+.sidebar-org{font-weight:700;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-vertical{font-size:10px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.03em}
+.sidebar-nav{flex:1;overflow-y:auto;padding:10px 10px}
+.sidebar-group-label{font-size:10.5px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.04em;margin:16px 10px 6px;}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer;user-select:none;transition:background .12s}
+.sidebar-item .si-icon{font-size:15px;flex:0 0 auto}
+.sidebar-item:hover{background:var(--paper)}
+.sidebar-item.active{background:color-mix(in srgb, var(--accent) 12%, transparent);color:var(--accent);box-shadow:inset 3px 0 0 var(--accent),0 0 12px color-mix(in srgb, var(--accent) 20%, transparent)}
+.sidebar-footer{border-top:1px solid var(--line);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.sidebar-user{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-2);margin-bottom:4px}
+.sidebar-user-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-footer .btn{width:100%}
+.sidebar-scrim{display:none;position:fixed;inset:0;background:rgba(18,20,26,0.35);z-index:29}
+
+.app-main{flex:1;min-width:0;display:flex;flex-direction:column}
+.mobile-topbar{display:none;align-items:center;gap:12px;padding:12px 16px;background:var(--paper-2);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:15}
+.hamburger{font-size:20px;cursor:pointer;padding:4px 8px}
+.mobile-topbar-org{font-weight:700;font-size:14px}
+
+@media (max-width:860px){
+  .sidebar{position:fixed;left:0;top:0;bottom:0;margin:0;border-radius:0 22px 22px 0;height:100vh;z-index:30;transform:translateX(-100%);transition:transform .22s ease;box-shadow:0 0 30px rgba(18,20,26,0.15)}
+  .sidebar.show{transform:translateX(0)}
+  .sidebar-scrim.show{display:block}
+  .mobile-topbar{display:flex}
+  .shell-body{padding-bottom:92px}
+  .bottom-pill-nav{display:flex}
+  .fld-row{grid-template-columns:1fr !important;gap:12px}
+}
+@media (max-width:520px){
+  .fld-row{grid-template-columns:1fr !important}
+}
+
+/* ---- Bottom pill nav (mobile) — matches reference: rounded pill, icon-only, active item highlighted ---- */
+.bottom-pill-nav{
+  display:none;position:fixed;left:16px;right:16px;bottom:16px;z-index:35;
+  background:rgba(255,255,255,0.6);backdrop-filter:blur(24px) saturate(180%);-webkit-backdrop-filter:blur(24px) saturate(180%);
+  border:1px solid rgba(255,255,255,0.55);border-radius:30px;box-shadow:0 10px 34px rgba(18,20,26,0.16);
+  padding:8px;align-items:center;justify-content:space-around;
+}
+.bpn-item{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--ink-2);cursor:pointer;transition:all .18s}
+.bpn-item.active{background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;box-shadow:0 4px 14px color-mix(in srgb, var(--accent) 45%, transparent),0 0 18px color-mix(in srgb, var(--accent) 35%, transparent)}
+.bpn-item:active{transform:scale(0.88)}
+.bpn-item:nth-child(3){
+  width:56px;height:56px;margin-top:-22px;font-size:22px;
+  background:rgba(255,255,255,0.75);backdrop-filter:blur(10px);
+  border:3px solid rgba(255,255,255,0.9);
+  box-shadow:0 6px 20px color-mix(in srgb, var(--accent) 35%, transparent),0 0 0 1px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.bpn-item.active:nth-child(3){background:linear-gradient(135deg,var(--accent),var(--accent-2));box-shadow:0 8px 26px color-mix(in srgb, var(--accent) 55%, transparent),0 0 30px color-mix(in srgb, var(--accent) 45%, transparent)}
+.bpn-more{position:relative}
+
+/* ---- Install App button ---- */
+.install-banner{display:none;align-items:center;gap:10px;background:rgba(255,255,255,0.55);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,0.6);border-radius:14px;padding:10px 14px;margin-bottom:16px}
+.install-banner.show{display:flex}
+.install-banner .ib-text{flex:1;font-size:12.5px;font-weight:600}
+.install-banner .ib-sub{font-size:10.5px;color:var(--ink-3);font-weight:400}
+</style>
+</head>
+<body>
+
+<!-- ============================================================ AUTH SCREEN ============================================================ -->
+<div class="screen" id="authScreen">
+  <div class="auth-wrap">
+    <div class="brand-row">
+      <img class="brand-logo" id="authLogo" style="display:none;">
+      <div class="brand-logo ph" id="authLogoPh" style="background:var(--accent);">V</div>
+      <div>
+        <div class="brand-name" id="authOrgName">Verticore</div>
+        <div class="brand-sub" id="authOrgSub">Sign in to your workspace</div>
+      </div>
+    </div>
+
+    <div class="rail-card">
+      <div class="rail-card-body">
+        <button type="button" class="btn btn-ghost" style="margin-bottom:14px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="signInWithGoogle()">
+          <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.5 29.6 4.5 24 4.5 12.9 4.5 4 13.4 4 24.5s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-4z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6.5 29.6 4.5 24 4.5c-7.7 0-14.4 4.4-17.7 10.2z"/><path fill="#4CAF50" d="M24 44.5c5.5 0 10.4-1.9 14.1-5.1l-6.5-5.5C29.5 35.7 26.9 36.5 24 36.5c-5.2 0-9.6-3.3-11.3-8l-6.6 5.1C9.5 40 16.2 44.5 24 44.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.5 5.5C41.6 36 44 30.7 44 24.5c0-1.3-.1-2.7-.4-4z"/></svg>
+          Sign in with Google
+        </button>
+        <div class="oauth-divider"><span>or use your organization code</span></div>
+        <div class="tabs">
+          <div class="tab active" id="tabSignin" onclick="setAuthTab('signin')">Sign in</div>
+          <div class="tab" id="tabSignup" onclick="setAuthTab('signup')">Create organization</div>
+        </div>
+
+        <div id="authMsg" class="msg"></div>
+
+        <!-- SIGN IN -->
+        <div id="paneSignin">
+          <div class="fld">
+            <label>Organization code</label>
+            <input id="siSlug" placeholder="e.g. demo-enterprise" oninput="previewTenant('siSlug','siPreview')" autocomplete="off">
+            <div class="tenant-preview" id="siPreview"><span class="tp-text">Type your organization's code to preview its branding</span></div>
+          </div>
+          <div class="fld">
+            <label>Email</label>
+            <input id="siEmail" type="email" autocomplete="username">
+          </div>
+          <div class="fld">
+            <label>Password</label>
+            <input id="siPassword" type="password" autocomplete="current-password">
+          </div>
+          <button class="btn btn-primary" id="siBtn" onclick="doSignIn()">Sign in</button>
+        </div>
+
+        <!-- SIGN UP / CREATE ORG -->
+        <div id="paneSignup" style="display:none;">
+          <p class="fld-hint" style="margin-bottom:10px;">Were you invited by an admin? Just fill your Name, Email &amp; Password below and leave Organization fields blank.</p>
+          <div class="fld">
+            <label>Organization name (leave blank if invited)</label>
+            <input id="suCompany" placeholder="e.g. Chitwan Medical College">
+          </div>
+          <div class="fld">
+            <label>Organization code (used to sign in, no spaces)</label>
+            <input id="suSlug" placeholder="e.g. chitwan-medical" oninput="sanitizeSlug()">
+            <div class="fld-hint">Your team will sign in using this code — lowercase letters, numbers and hyphens only.</div>
+          </div>
+          <div class="fld">
+            <label>Organization type</label>
+            <select id="suVertical">
+              <option value="medical">Medical College</option>
+              <option value="hospital">Hospital</option>
+              <option value="school">School / Campus</option>
+              <option value="education_consultancy">Education Consultancy</option>
+              <option value="generic_enterprise" selected>Other / Generic Enterprise</option>
+            </select>
+          </div>
+          <div class="fld">
+            <label>Organization logo (optional — can add later too)</label>
+            <div class="logo-upload-row">
+              <img class="logo-upload-preview" id="suLogoPreview" style="display:none;">
+              <input type="file" id="suLogoInput" accept="image/*" style="display:none;" onchange="handleSignupLogo(event)">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('suLogoInput').click()">📎 Choose logo</button>
+            </div>
+          </div>
+          <div class="fld-row">
+            <div class="fld"><label>Your name</label><input id="suName"></div>
+            <div class="fld"><label>Your email</label><input id="suEmail" type="email" autocomplete="username"></div>
+          </div>
+          <div class="fld">
+            <label>Password</label>
+            <input id="suPassword" type="password" autocomplete="new-password">
+          </div>
+          <button class="btn btn-primary" id="suBtn" onclick="doSignUp()">Create organization &amp; continue</button>
+        </div>
+      </div>
+    </div>
+    <div class="footer-note">Verticore — one platform, every organization's own identity.</div>
+  </div>
+</div>
+
+<!-- ============================================================ APP SHELL ============================================================ -->
+<div class="app" id="appShell">
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <img class="brand-logo" id="appLogo" style="display:none;">
+        <div class="brand-logo ph" id="appLogoPh">V</div>
+        <div class="sidebar-brand-text">
+          <div class="sidebar-org" id="appOrgName">—</div>
+          <div class="sidebar-vertical" id="appVertical">—</div>
+        </div>
+      </div>
+      <div class="gsearch-trigger" onclick="openGlobalSearch()">
+        <span>🔎 Search everything…</span>
+        <span class="gsearch-kbd">Ctrl K</span>
+      </div>
+      <nav class="sidebar-nav" id="topNav">
+        <div class="sidebar-item active" data-view="dashboard" onclick="switchView('dashboard')"><span class="si-icon">🏠</span>Dashboard</div>
+        <div class="sidebar-group-label">Academic</div>
+        <div class="sidebar-item" data-view="visitors" onclick="switchView('visitors')"><span class="si-icon">🚪</span>Visitors</div>
+        <div class="sidebar-item" data-view="people" onclick="switchView('people')" id="navPeople"><span class="si-icon">👤</span>People</div>
+        <div class="sidebar-item" data-view="activities" onclick="switchView('activities')" id="navActivities"><span class="si-icon">📋</span>Activities</div>
+        <div class="sidebar-item" data-view="results" onclick="switchView('results')"><span class="si-icon">🎓</span>Results</div>
+        <div class="sidebar-item" data-view="attendance" onclick="switchView('attendance')"><span class="si-icon">📅</span>Attendance</div>
+        <div class="sidebar-group-label">Finance</div>
+        <div class="sidebar-item" data-view="fees" onclick="switchView('fees')"><span class="si-icon">💳</span>Fees</div>
+        <div class="sidebar-item" data-view="expenses" onclick="switchView('expenses')"><span class="si-icon">💸</span>Expenses</div>
+        <div class="sidebar-group-label">Operations</div>
+        <div class="sidebar-item" data-view="hostel" onclick="switchView('hostel')"><span class="si-icon">🏠</span>Hostel</div>
+        <div class="sidebar-item" data-view="studentcare" onclick="switchView('studentcare')"><span class="si-icon">🧑‍⚕️</span>Student Care</div>
+        <div class="sidebar-item" data-view="library" onclick="switchView('library')"><span class="si-icon">📚</span>Library</div>
+        <div class="sidebar-item" data-view="marketing" onclick="switchView('marketing')"><span class="si-icon">📣</span>Marketing</div>
+        <div class="sidebar-item" data-view="coldcalling" onclick="switchView('coldcalling')"><span class="si-icon">📞</span>Cold Calling</div>
+        <div class="sidebar-item" data-view="coordinator" onclick="switchView('coordinator')"><span class="si-icon">🧑‍💼</span>Coordinator</div>
+        <div class="sidebar-group-label">Insights</div>
+        <div class="sidebar-item" data-view="reportbuilder" onclick="switchView('reportbuilder')"><span class="si-icon">📊</span>Reports</div>
+        <div class="sidebar-item" data-view="adminpanel" onclick="switchView('adminpanel')" id="navAdminPanel" style="display:none;"><span class="si-icon">🛡️</span>Admin Panel</div>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="sidebar-user">
+          <span class="role-chip" id="appRole">—</span>
+          <span id="appUserName" class="sidebar-user-name">—</span>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="showSettings()">⚙️ Settings</button>
+        <button class="btn btn-ghost btn-sm" onclick="doSignOut()">Sign out</button>
+      </div>
+    </aside>
+    <div class="sidebar-scrim" id="sidebarScrim" onclick="toggleSidebar()"></div>
+
+    <div class="app-main">
+      <div class="mobile-topbar">
+        <span class="hamburger" onclick="toggleSidebar()">☰</span>
+        <span class="mobile-topbar-org" id="mobileOrgName">—</span>
+      </div>
+
+      <div class="bottom-pill-nav" id="bottomPillNav">
+        <div class="bpn-item active" data-view="dashboard" onclick="switchView('dashboard')" title="Dashboard">🏠</div>
+        <div class="bpn-item" data-view="people" onclick="switchView('people')" title="People">👤</div>
+        <div class="bpn-item" data-view="results" onclick="switchView('results')" title="Results">🎓</div>
+        <div class="bpn-item" data-view="fees" onclick="switchView('fees')" title="Fees">💳</div>
+        <div class="bpn-item bpn-more" onclick="toggleSidebar()" title="More">☰</div>
+      </div>
+
+  <div class="shell-body">
+    <div class="install-banner" id="installBanner">
+      <span style="font-size:20px;">📲</span>
+      <div class="ib-text">Install Verticore<div class="ib-sub">Add to your home screen for the full app experience</div></div>
+      <button class="btn btn-primary btn-sm" style="width:auto;" onclick="installApp()">Install</button>
+      <span class="modal-close" onclick="dismissInstallBanner()">✕</span>
+    </div>
+    <!-- DASHBOARD (modules) -->
+    <div id="viewDashboard" class="dash-wrap">
+      <div id="dashNoticeBanner"></div>
+      <div class="dash-mesh"></div>
+      <h1 class="shell-title" id="dashGreeting">Welcome</h1>
+      <p class="shell-sub" id="dashSub">Here's your workspace.</p>
+
+      <div class="glass-stats" id="dashStats"></div>
+
+      <div class="dash-section-head">Quick Actions</div>
+      <div class="quick-actions" id="quickActions"></div>
+
+      <div class="glass-card ai-suggest-card" id="aiSuggestCard">
+        <div class="ai-suggest-head">
+          <span>✨ AI Suggestions</span>
+          <button class="btn btn-ghost btn-sm" style="width:auto;" onclick="loadAiSuggestions(true)">Refresh</button>
+        </div>
+        <div id="aiSuggestBody" class="empty-hint">Loading suggestions…</div>
+      </div>
+
+      <div class="dash-section-head">Modules</div>
+      <div class="grid" id="moduleGrid"></div>
+    </div>
+
+    <!-- PEOPLE -->
+    <!-- VISITORS -->
+    <div id="viewVisitors" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Visitors</h1>
+          <p class="shell-sub">Physical &amp; virtual visitor intake — admissions, enquiries, campus visits.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('visitors')">✨ Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportVisitorsCsv()">⬇️ Export</button>
+        </div>
+      </div>
+
+      <div class="glass-stats" id="visitorStats" style="margin-bottom:16px;"></div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <label class="fld-hint">Visit Mode *</label>
+          <div class="tabs" style="max-width:340px;margin-bottom:14px;">
+            <div class="tab active" id="vTabPhysical" onclick="setVisitMode('Physical')">🏫 Physical</div>
+            <div class="tab" id="vTabVirtual" onclick="setVisitMode('Virtual')">📹 Virtual</div>
+          </div>
+
+          <div class="fld-row">
+            <div class="fld"><label>Name *</label><input id="vName" placeholder="Full name"></div>
+            <div class="fld"><label>Type</label>
+              <select id="vType"><option>Student</option><option>Parent</option><option>Agent</option><option>Other</option></select>
+            </div>
+          </div>
+
+          <div class="fld">
+            <label>📷 Photo (auto-added to report)</label>
+            <input type="file" id="vPhotoInput" accept="image/*" capture="environment" style="display:none;" onchange="handleVisitorPhoto(event,'v')">
+            <input type="file" id="vPhotoGalleryInput" accept="image/*" style="display:none;" onchange="handleVisitorPhoto(event,'v')">
+            <div class="rp-actions">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('vPhotoInput').click()">📷 Camera</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('vPhotoGalleryInput').click()">🖼️ Gallery</button>
+            </div>
+            <div class="photo-drop" id="vPhotoDrop" style="margin-top:8px;">
+              <span id="vPhotoHint">No photo yet — use Camera or Gallery above</span>
+              <div id="vPhotoPreviewWrap" style="display:none;"><img id="vPhotoPreview" style="max-width:100%;max-height:160px;border-radius:8px;"></div>
+            </div>
+          </div>
+
+          <div class="fld-row">
+            <div class="fld"><label>Contact</label><input id="vContact" placeholder="+91 XXXXX"></div>
+            <div class="fld"><label>Email</label><input id="vEmail" type="email" placeholder="email@…"></div>
+          </div>
+          <div class="fld-row">
+            <div class="fld"><label>State</label><input id="vState" placeholder="e.g. Andhra Pradesh"></div>
+            <div class="fld"><label>City</label><input id="vCity" placeholder="e.g. Visakhapatnam"></div>
+          </div>
+          <div class="fld-row">
+            <div class="fld"><label id="vCollegeInterestLabel">Institution Interest</label><input id="vCollegeInterest" placeholder="e.g. Chitwan Medical College"></div>
+            <div class="fld"><label>Visit Date</label><input id="vVisitDate" type="date"></div>
+          </div>
+
+          <div class="fld">
+            <label>Nepal Visit</label>
+            <div class="tabs" style="max-width:280px;">
+              <div class="tab active" id="vNepalFirst" onclick="setNepalVisit('First Time')">🇳🇵 First Time</div>
+              <div class="tab" id="vNepalReturn" onclick="setNepalVisit('Return')">🔁 Return</div>
+            </div>
+          </div>
+
+          <div class="fld">
+            <label>Visit Type (select all that apply)</label>
+            <div id="vVisitTypeTags" class="rp-actions" style="flex-wrap:wrap;">
+              <span class="att-chip" data-tag="Campus" onclick="toggleVisitorTag(this)">🏫 Campus</span>
+              <span class="att-chip" data-tag="Hospital" onclick="toggleVisitorTag(this)">🏥 Hospital</span>
+              <span class="att-chip" data-tag="Hostel" onclick="toggleVisitorTag(this)">🏠 Hostel</span>
+              <span class="att-chip" data-tag="Faculty" onclick="toggleVisitorTag(this)">🧑‍🏫 Faculty</span>
+              <span class="att-chip" data-tag="Fee" onclick="toggleVisitorTag(this)">💰 Fee</span>
+              <span class="att-chip" data-tag="Playground" onclick="toggleVisitorTag(this)">⚽ Playground</span>
+              <span class="att-chip" data-tag="Admin" onclick="toggleVisitorTag(this)">🏢 Admin</span>
+              <span class="att-chip" data-tag="Examination" onclick="toggleVisitorTag(this)">📝 Examination</span>
+              <span class="att-chip" data-tag="Library" onclick="toggleVisitorTag(this)">📚 Library</span>
+              <span class="att-chip" data-tag="Labs" onclick="toggleVisitorTag(this)">🔬 Labs</span>
+            </div>
+          </div>
+
+          <div class="fld-row">
+            <div class="fld"><label>Reference</label>
+              <select id="vReference"><option>Direct</option><option>Agent</option><option>Alumni</option><option>Social Media</option><option>Friend/Family</option></select>
+            </div>
+            <div class="fld"><label>Reference Name</label><input id="vReferenceName" placeholder="Name"></div>
+          </div>
+          <div class="fld-row">
+            <div class="fld"><label>NEET Score</label><input id="vNeetScore" type="number" placeholder="e.g. 520"></div>
+            <div class="fld"><label>Admission Plan</label><input id="vAdmissionPlan" placeholder="e.g. This year 2026"></div>
+          </div>
+
+          <div class="fld">
+            <label>Documents</label>
+            <div id="vDocsTags" class="rp-actions" style="flex-wrap:wrap;margin-bottom:10px;">
+              <span class="att-chip" data-doc="10th" onclick="toggleVisitorDoc(this)">10th</span>
+              <span class="att-chip" data-doc="12th" onclick="toggleVisitorDoc(this)">12th</span>
+              <span class="att-chip" data-doc="NEET Score" onclick="toggleVisitorDoc(this)">NEET Score</span>
+              <span class="att-chip" data-doc="NEET Admit Card" onclick="toggleVisitorDoc(this)">NEET Admit Card</span>
+              <span class="att-chip" data-doc="Passport" onclick="toggleVisitorDoc(this)">Passport</span>
+              <span class="att-chip" data-doc="Photos" onclick="toggleVisitorDoc(this)">Photos</span>
+              <span class="att-chip" data-doc="Aadhar" onclick="toggleVisitorDoc(this)">Aadhar</span>
+            </div>
+            <input type="file" id="vDocInput" accept="image/*,.pdf" style="display:none;" onchange="handleVisitorDocUpload(event)">
+            <div class="photo-drop" onclick="document.getElementById('vDocInput').click()">
+              📎 Tap to upload document photos (marksheet, ID, etc.)
+            </div>
+            <div id="vDocsGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;"></div>
+          </div>
+
+          <div class="fld"><label>Major Queries</label><textarea id="vMajorQueries" class="ai-textarea" placeholder="Fee, hostel, bond, recognition…"></textarea></div>
+          <div class="fld-row">
+            <div class="fld"><label>Status</label><select id="vStatus"><option>New</option><option>Follow-up</option><option>Converted</option><option>Not Interested</option></select></div>
+            <div class="fld"><label>Follow-up Date</label><input id="vFollowUpDate" type="date"></div>
+          </div>
+          <div class="fld"><label>Notes</label><input id="vNotes" placeholder="Any other notes…"></div>
+
+          <input type="hidden" id="vId">
+          <div class="modal-actions">
+            <button class="btn btn-danger btn-sm" id="vDeleteBtn" style="display:none;" onclick="deleteVisitorConfirm()">Delete</button>
+            <button class="btn btn-primary" onclick="saveVisitor()">💾 Save Visit</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail-card">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 10px;">Visitor Log</h3>
+          <input class="search-input" id="visitorSearch" placeholder="Search by name, phone, city…" oninput="renderVisitorsList()" style="margin-bottom:10px;">
+          <div id="visitorsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="viewPeople" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title" id="peopleTitle">People</h1>
+          <p class="shell-sub" id="peopleSub">Everyone your organization tracks.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('people')">✨ Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportPeopleCsv()">⬇️ Export</button>
+          <button class="btn btn-ghost btn-sm" onclick="document.getElementById('peopleImportInput').click()">⬆️ Import</button>
+          <input type="file" id="peopleImportInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handlePeopleImport(event)">
+          <button class="btn btn-primary btn-sm" onclick="openPersonModal()" id="peopleAddBtn">+ Add</button>
+        </div>
+      </div>
+      <div class="toolbar" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+        <input class="search-input" id="peopleSearch" placeholder="Search by name, email or phone…" oninput="renderPeopleList()" style="flex:1;min-width:200px;">
+        <select id="peopleStatusFilter" onchange="renderPeopleList()" style="width:auto;padding:9px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--paper-2);">
+          <option value="">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option><option value="archived">Archived</option>
+        </select>
+      </div>
+      <div id="peopleBulkBar" style="display:none;margin-bottom:10px;">
+        <div class="rail-card"><div class="rail-card-body" style="display:flex;align-items:center;gap:12px;padding:10px 16px;">
+          <span id="peopleBulkCount" style="font-size:12.5px;font-weight:600;"></span>
+          <button class="btn btn-ghost btn-sm" onclick="bulkExportSelectedPeople()">⬇️ Export selected</button>
+          <button class="btn btn-danger btn-sm" onclick="bulkDeleteSelectedPeople()">Delete selected</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearPeopleSelection()">Clear</button>
+        </div></div>
+      </div>
+      <div id="peopleList" class="rail-card"><div class="rail-card-body"><div class="empty-hint">Loading…</div></div></div>
+    </div>
+
+    <!-- ACTIVITIES -->
+    <div id="viewActivities" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title" id="activitiesTitle">Activities</h1>
+          <p class="shell-sub">Pipeline view — click a card to update its stage.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('activities')">✨ Report</button>
+          <button class="btn btn-primary btn-sm" onclick="openActivityModal()">+ Add</button>
+        </div>
+      </div>
+      <div id="activitiesBoard" class="kanban"></div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="viewResults" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Results</h1>
+          <p class="shell-sub" id="resultsSub">Search any student to view their full result, share it, or download the marksheet.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('results')">✨ Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="openExcelUploadModal()">⬆️ Upload Excel</button>
+        </div>
+      </div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <div class="fld-row" style="grid-template-columns:2fr 1fr 1fr;">
+            <div class="fld"><label>Search (name / roll / reg / university no)</label><input id="rSearch" placeholder="Type to search…" oninput="renderResultsList()"></div>
+            <div class="fld"><label>Batch</label><select id="rBatchFilter" onchange="renderResultsList()"><option value="">All</option></select></div>
+            <div class="fld"><label>Category</label><select id="rCategoryFilter" onchange="renderResultsList()"><option value="">All</option></select></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="results-layout">
+        <div class="rail-card" style="flex:1;min-width:260px;">
+          <div class="rail-card-body" style="padding:0;">
+            <div id="resultsList"><div class="empty-hint" style="padding:16px;">Loading…</div></div>
+          </div>
+        </div>
+
+        <div class="rail-card" id="resultProfileCard" style="flex:1.4;min-width:320px;display:none;">
+          <div class="rail-card-body">
+            <div id="resultProfile"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail-card" style="margin-top:16px;">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">Batch &amp; Category Analysis</h3>
+          <p class="desc">Based on the students currently matching your filters above.</p>
+          <div class="analysis-grid">
+            <div>
+              <div class="chart-label">Pass / Fail</div>
+              <div id="pieChartHolder"></div>
+            </div>
+            <div>
+              <div class="chart-label">Average % by Category</div>
+              <div id="barChartHolder"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FEES -->
+    <!-- ATTENDANCE -->
+    <div id="viewAttendance" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Attendance</h1>
+          <p class="shell-sub">Mark daily attendance by batch, or bulk-upload from Excel.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('attendance')">✨ Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportAttendanceCsv()">⬇️ Export</button>
+          <button class="btn btn-ghost btn-sm" onclick="openAttendanceUploadModal()">⬆️ Upload Excel</button>
+        </div>
+      </div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <div class="fld-row" style="grid-template-columns:1fr 1fr 1fr;">
+            <div class="fld"><label>Date</label><input id="attDate" type="date" onchange="loadAttendanceRoster()"></div>
+            <div class="fld"><label>Batch</label><select id="attBatch" onchange="loadAttendanceRoster()"><option value="">Choose a batch…</option></select></div>
+            <div class="fld"><label>Subject (optional)</label><input id="attSubject" placeholder="e.g. Anatomy"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-stats" id="attStats" style="margin-bottom:16px;"></div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body" style="padding:0;">
+          <div id="attRoster"><div class="empty-hint" style="padding:16px;">Choose a batch and date to load the roster.</div></div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="attSaveBtn" style="display:none;margin-bottom:20px;" onclick="saveAttendanceRoster()">💾 Save Attendance</button>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">Recent Records</h3>
+          <p class="desc">Every session you've taken attendance for — tap to reopen and review.</p>
+          <div class="fld"><label>Search by batch, date or subject</label><input id="attSessionSearch" placeholder="e.g. MBBS 2026, Anatomy…" oninput="renderAttSessions()"></div>
+          <div id="attSessionsList"></div>
+        </div>
+      </div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">Batch Analytics</h3>
+          <p class="desc">Average attendance % by batch.</p>
+          <div id="attBarChartHolder"></div>
+        </div>
+      </div>
+
+      <div class="rail-card">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">🔎 Student-wise Attendance Analysis</h3>
+          <p class="desc">Search a student for their individual attendance history, chart and a downloadable report.</p>
+          <div class="fld"><label>Search student</label><input id="attStudentSearch" placeholder="Name or roll no…" oninput="renderAttStudentSearchResults()"></div>
+          <div id="attStudentSearchResults"></div>
+          <div id="attStudentAnalysis" style="margin-top:14px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="viewFees" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Fees</h1>
+          <p class="shell-sub">Track dues, payments and reminders per student.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('fees')">✨ Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportFeesCsv()">⬇️ Export</button>
+          <button class="btn btn-primary btn-sm" onclick="openFeeModal()">+ Add Fee Record</button>
+        </div>
+      </div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <div class="fld-row" style="grid-template-columns:2fr 1fr 1fr 1fr;">
+            <div class="fld"><label>Search (name or roll no)</label><input id="feeSearch" placeholder="Type to search…" oninput="renderFeesList()"></div>
+            <div class="fld"><label>Batch</label><select id="feeBatchFilter" onchange="renderFeesList()"><option value="">All</option></select></div>
+            <div class="fld"><label>Currency</label><select id="feeCurrencyFilter" onchange="renderFeesList()"><option value="">All</option><option value="NPR">NPR</option><option value="INR">INR</option><option value="USD">USD</option></select></div>
+            <div class="fld"><label>Status</label><select id="feeStatusFilter" onchange="renderFeesList()">
+              <option value="">All</option><option value="paid">Paid</option><option value="partial">Partial</option><option value="pending">Pending</option><option value="overdue">Overdue</option>
+            </select></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-stats" id="feeStats" style="margin-bottom:16px;"></div>
+      <div id="feesBulkBar" style="display:none;margin-bottom:10px;">
+        <div class="rail-card"><div class="rail-card-body" style="display:flex;align-items:center;gap:12px;padding:10px 16px;">
+          <span id="feesBulkCount" style="font-size:12.5px;font-weight:600;"></span>
+          <button class="btn btn-ghost btn-sm" onclick="bulkExportSelectedFees()">⬇️ Export selected</button>
+          <button class="btn btn-danger btn-sm" onclick="bulkDeleteSelectedFees()">Delete selected</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearFeeSelection()">Clear</button>
+        </div></div>
+      </div>
+
+      <div class="results-layout">
+        <div class="rail-card" style="flex:1;min-width:260px;">
+          <div class="rail-card-body" style="padding:0;">
+            <div id="feesList"><div class="empty-hint" style="padding:16px;">Loading…</div></div>
+          </div>
+        </div>
+        <div class="rail-card" id="feeProfileCard" style="flex:1.4;min-width:320px;display:none;">
+          <div class="rail-card-body">
+            <div id="feeProfile"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail-card" style="margin-top:16px;">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">Collections Overview</h3>
+          <p class="desc">Based on the fee records currently matching your filters above.</p>
+          <div class="analysis-grid">
+            <div>
+              <div class="chart-label">Paid vs Pending (amount)</div>
+              <div id="feePieChartHolder"></div>
+            </div>
+            <div>
+              <div class="chart-label">Collected by Batch</div>
+              <div id="feeBarChartHolder"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIBRARY -->
+    <!-- HOSTEL -->
+    <!-- EXPENSES -->
+    <div id="viewExpenses" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Expenses</h1>
+          <p class="shell-sub">Travel, food, hotel and media costs.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('expenses')">✨ Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportExpensesCsv()">⬇️ Export</button>
+        </div>
+      </div>
+
+      <div class="glass-stats" id="expenseStats" style="margin-bottom:16px;"></div>
+
+      <div class="tabs" id="expenseCategoryTabs" style="max-width:100%;overflow-x:auto;display:flex;">
+        <div class="tab active" data-cat="" onclick="setExpenseCategory('')">All</div>
+        <div class="tab" data-cat="Travel" onclick="setExpenseCategory('Travel')">🚗 Travel</div>
+        <div class="tab" data-cat="Food" onclick="setExpenseCategory('Food')">🍽️ Food</div>
+        <div class="tab" data-cat="Hotel" onclick="setExpenseCategory('Hotel')">🏨 Hotel</div>
+        <div class="tab" data-cat="Media" onclick="setExpenseCategory('Media')">📰 Media</div>
+        <div class="tab" data-cat="Other" onclick="setExpenseCategory('Other')">📦 Other</div>
+      </div>
+
+      <button class="btn btn-primary" style="margin:14px 0;" onclick="openExpenseModal()">+ Add Expense</button>
+      <input class="search-input" id="expenseSearch" placeholder="Search by purpose, category, amount…" oninput="renderExpensesList()" style="margin-bottom:14px;width:100%;">
+
+      <div id="expensesBulkBar" style="display:none;margin-bottom:10px;">
+        <div class="rail-card"><div class="rail-card-body" style="display:flex;align-items:center;gap:12px;padding:10px 16px;">
+          <span id="expensesBulkCount" style="font-size:12.5px;font-weight:600;"></span>
+          <button class="btn btn-ghost btn-sm" onclick="bulkExportSelectedExpenses()">⬇️ Export selected</button>
+          <button class="btn btn-danger btn-sm" onclick="bulkDeleteSelectedExpenses()">Delete selected</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearExpenseSelection()">Clear</button>
+        </div></div>
+      </div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body" style="padding:0;">
+          <div id="expensesList"><div class="empty-hint" style="padding:16px;">Loading…</div></div>
+        </div>
+      </div>
+
+      <div class="rail-card">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">Spend Analysis</h3>
+          <p class="desc">By category (current currency filter/view).</p>
+          <div id="expenseChartHolder"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="viewHostel" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Hostel</h1>
+          <p class="shell-sub">Rooms, issues, mess &amp; leave records.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('hostel')">✨ Report</button>
+        </div>
+      </div>
+
+      <div class="tabs" style="max-width:520px;">
+        <div class="tab active" id="hTabRooms" onclick="setHostelTab('rooms')">🛏️ Rooms</div>
+        <div class="tab" id="hTabIssues" onclick="setHostelTab('issues')">🔧 Issues</div>
+        <div class="tab" id="hTabMess" onclick="setHostelTab('mess')">🍽️ Mess</div>
+        <div class="tab" id="hTabLeave" onclick="setHostelTab('leave')">🚪 Leave/Pass</div>
+      </div>
+
+      <div class="glass-stats" id="hostelStats" style="margin:14px 0 16px;"></div>
+
+      <!-- ROOMS -->
+      <div id="hPaneRooms">
+        <div class="rail-card" style="margin-bottom:16px;">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">🛏️ Assign Room</h3>
+            <div class="fld"><label>Student Name</label><input id="hRoomPersonId" placeholder="Choose or type…" list="hostelPeopleList"></div>
+            <datalist id="hostelPeopleList"></datalist>
+            <div class="fld-row">
+              <div class="fld"><label>Block</label><input id="hRoomBlock" placeholder="e.g. Boys (B)"></div>
+              <div class="fld"><label>Floor No</label><input id="hRoomFloor" placeholder="e.g. 2nd Floor"></div>
+            </div>
+            <div class="fld"><label>Room No</label><input id="hRoomNo" placeholder="e.g. 204"></div>
+            <button class="btn btn-primary" onclick="saveHostelRoom()">💾 Assign Room</button>
+          </div>
+        </div>
+        <div class="rail-card">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 10px;">Room Assignments</h3>
+            <input class="search-input" id="hRoomSearch" placeholder="Search by student or room…" oninput="renderHostelRooms()" style="margin-bottom:10px;">
+            <div id="hRoomsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ISSUES -->
+      <div id="hPaneIssues" style="display:none;">
+        <div class="rail-card" style="margin-bottom:16px;">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">🔧 Report Room Issue</h3>
+            <div class="fld"><label>Student Name</label><input id="hIssuePersonName" placeholder="Student name"></div>
+            <div class="fld"><label>Room No</label><input id="hIssueRoom" placeholder="e.g. 204"></div>
+            <div class="fld"><label>Issue Details</label><textarea id="hIssueDetails" class="ai-textarea" placeholder="Describe the issue…"></textarea></div>
+            <div class="fld">
+              <label>Attach Photo / File (optional)</label>
+              <input type="file" id="hIssueFileInput" accept="image/*" style="display:none;" onchange="handleHostelIssueFile(event)">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('hIssueFileInput').click()">📎 Attach File</button>
+              <span id="hIssueFileTxt" class="fld-hint">No file attached</span>
+            </div>
+            <button class="btn btn-primary" onclick="saveHostelIssue()">💾 Log Issue</button>
+          </div>
+        </div>
+        <div class="rail-card">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 10px;">Room Issues</h3>
+            <input class="search-input" id="hIssueSearch" placeholder="Search by student or room…" oninput="renderHostelIssues()" style="margin-bottom:10px;">
+            <div id="hIssuesList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MESS -->
+      <div id="hPaneMess" style="display:none;">
+        <div class="rail-card" style="margin-bottom:16px;">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">🍽️ Report Mess Issue</h3>
+            <div class="fld"><label>Student Name (optional)</label><input id="hMessPersonName" placeholder="Student name"></div>
+            <div class="fld"><label>Issue Details</label><textarea id="hMessDetails" class="ai-textarea" placeholder="Food quality, hygiene, timing…"></textarea></div>
+            <button class="btn btn-primary" onclick="saveHostelMess()">💾 Log Mess Issue</button>
+          </div>
+        </div>
+        <div class="rail-card">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 10px;">Mess Issues</h3>
+            <input class="search-input" id="hMessSearch" placeholder="Search by student…" oninput="renderHostelMess()" style="margin-bottom:10px;">
+            <div id="hMessList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LEAVE/PASS -->
+      <div id="hPaneLeave" style="display:none;">
+        <div class="rail-card" style="margin-bottom:16px;">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">🚪 New Leave / Pass</h3>
+            <div class="fld"><label>Student Name</label><input id="hLeavePersonName" placeholder="Student name"></div>
+            <div class="fld"><label>Pass Type</label>
+              <div class="tabs" style="max-width:320px;">
+                <div class="tab active" id="hPassTypeDay" onclick="setPassType('day')">☀️ Day Pass</div>
+                <div class="tab" id="hPassTypeNight" onclick="setPassType('night')">🌙 Night Pass</div>
+              </div>
+            </div>
+            <div class="fld-row">
+              <div class="fld"><label>Out Date/Time</label><input id="hLeaveOut" type="datetime-local"></div>
+              <div class="fld"><label>Return Date/Time</label><input id="hLeaveReturn" type="datetime-local"></div>
+            </div>
+            <div class="fld"><label>Reason (optional)</label><input id="hLeaveReason" placeholder="Reason for leave"></div>
+            <div class="fld">
+              <label>Application Attachment (optional)</label>
+              <input type="file" id="hLeaveFileInput" accept="image/*,.pdf" style="display:none;" onchange="handleHostelLeaveFile(event)">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('hLeaveFileInput').click()">📎 Attach Application</button>
+              <span id="hLeaveFileTxt" class="fld-hint">No file attached</span>
+            </div>
+            <button class="btn btn-primary" onclick="saveHostelLeave()">💾 Save Pass</button>
+          </div>
+        </div>
+        <div class="rail-card">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 10px;">Leave / Pass Records</h3>
+            <input class="search-input" id="hLeaveSearch" placeholder="Search by student or room…" oninput="renderHostelLeave()" style="margin-bottom:10px;">
+            <div id="hLeaveList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STUDENT CARE -->
+    <div id="viewStudentcare" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Student Care</h1>
+          <p class="shell-sub">Disputes, complaints &amp; mentor session logs.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('studentcare')">✨ Report</button>
+        </div>
+      </div>
+
+      <div class="tabs" style="max-width:520px;">
+        <div class="tab active" id="scTabDisputes" onclick="setCareTab('disputes')">⚖️ Disputes</div>
+        <div class="tab" id="scTabComplaints" onclick="setCareTab('complaints')">📣 Complaints</div>
+        <div class="tab" id="scTabMentor" onclick="setCareTab('mentor')">🧑‍🏫 Mentor Log</div>
+      </div>
+
+      <div class="glass-stats" id="careStats" style="margin:14px 0 16px;"></div>
+
+      <!-- DISPUTES -->
+      <div id="scPaneDisputes">
+        <div class="rail-card" style="margin-bottom:16px;">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">⚖️ New Dispute</h3>
+            <div class="fld"><label>Student Name</label><input id="scDisputeName" placeholder="Student name"></div>
+            <div class="fld"><label>Details</label><textarea id="scDisputeDetails" class="ai-textarea" placeholder="What is the dispute about…"></textarea></div>
+            <button class="btn btn-primary" onclick="saveCareRecord('dispute')">💾 Log Dispute</button>
+          </div>
+        </div>
+        <div class="rail-card">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 10px;">Disputes</h3>
+            <input class="search-input" id="scDisputeSearch" placeholder="Search by student…" oninput="renderCareList('dispute')" style="margin-bottom:10px;">
+            <div id="scDisputesList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COMPLAINTS -->
+      <div id="scPaneComplaints" style="display:none;">
+        <div class="rail-card" style="margin-bottom:16px;">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">📣 New Complaint</h3>
+            <div class="fld"><label>Student Name</label><input id="scComplaintName" placeholder="Student name"></div>
+            <div class="fld"><label>Details</label><textarea id="scComplaintDetails" class="ai-textarea" placeholder="Complaint details…"></textarea></div>
+            <button class="btn btn-primary" onclick="saveCareRecord('complaint')">💾 Log Complaint</button>
+          </div>
+        </div>
+        <div class="rail-card">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 10px;">Complaints</h3>
+            <input class="search-input" id="scComplaintSearch" placeholder="Search by student…" oninput="renderCareList('complaint')" style="margin-bottom:10px;">
+            <div id="scComplaintsList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- MENTOR LOG -->
+      <div id="scPaneMentor" style="display:none;">
+        <div class="rail-card" style="margin-bottom:16px;">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">🧑‍🏫 New Mentor Session</h3>
+            <div class="fld"><label>Student Name</label><input id="scMentorName" placeholder="Student name"></div>
+            <div class="fld-row">
+              <div class="fld"><label>Date</label><input id="scMentorDate" type="date"></div>
+              <div class="fld"><label>Duration (minutes)</label><input id="scMentorDuration" type="number" placeholder="e.g. 30"></div>
+            </div>
+            <div class="fld"><label>Issues / Notes Discussed</label><textarea id="scMentorNotes" class="ai-textarea" placeholder="What was discussed in the session…"></textarea></div>
+            <button class="btn btn-primary" onclick="saveCareRecord('mentor')">💾 Log Session</button>
+          </div>
+        </div>
+        <div class="rail-card">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 10px;">Recent Mentor Sessions</h3>
+            <input class="search-input" id="scMentorSearch" placeholder="Search by student…" oninput="renderCareList('mentor')" style="margin-bottom:10px;">
+            <div id="scMentorList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="viewLibrary" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Library</h1>
+          <p class="shell-sub">Check-in / check-out register — manual entry or photo upload with AI extraction.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('library')">✨ Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportLibraryCsv()">⬇️ Export</button>
+          <button class="btn btn-primary btn-sm" onclick="openLibraryModal()">+ Add Entry</button>
+        </div>
+      </div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <div class="fld-row" style="grid-template-columns:2fr 1fr;">
+            <div class="fld"><label>Search (name or serial no)</label><input id="libSearch" placeholder="Type to search…" oninput="renderLibraryList()"></div>
+            <div class="fld"><label>Date</label><input id="libDateFilter" type="date" onchange="renderLibraryList()"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-stats" id="libStats" style="margin-bottom:16px;"></div>
+      <div id="libraryBulkBar" style="display:none;margin-bottom:10px;">
+        <div class="rail-card"><div class="rail-card-body" style="display:flex;align-items:center;gap:12px;padding:10px 16px;">
+          <span id="libraryBulkCount" style="font-size:12.5px;font-weight:600;"></span>
+          <button class="btn btn-ghost btn-sm" onclick="bulkExportSelectedLibrary()">⬇️ Export selected</button>
+          <button class="btn btn-danger btn-sm" onclick="bulkDeleteSelectedLibrary()">Delete selected</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearLibrarySelection()">Clear</button>
+        </div></div>
+      </div>
+
+      <div class="rail-card">
+        <div class="rail-card-body" style="padding:0;overflow-x:auto;">
+          <table class="lib-table" id="libTable">
+            <thead><tr><th style="width:28px;"></th><th>S.No</th><th>Name</th><th>In Time</th><th>Out Time</th><th>Duration</th><th></th></tr></thead>
+            <tbody id="libTableBody"><tr><td colspan="7" class="empty-hint" style="padding:16px;">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="rail-card" style="margin-top:16px;">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">Visits Analytics</h3>
+          <p class="desc">Based on entries currently matching your filters above.</p>
+          <div class="chart-label">Visits per day</div>
+          <div id="libBarChartHolder"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MARKETING HUB -->
+    <div id="viewMarketing" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Marketing Hub</h1>
+          <p class="shell-sub">Every image, video, poster and caption you've ever posted — social and physical — in one place.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('marketing')">✨ Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportMarketingCsv()">⬇️ Export</button>
+          <button class="btn btn-primary btn-sm" onclick="openMarketingModal()">+ Add Asset</button>
+        </div>
+      </div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <div class="fld-row" style="grid-template-columns:2fr 1fr 1fr 1fr;">
+            <div class="fld"><label>Search (caption, campaign, hashtags)</label><input id="mktSearch" placeholder="Type to search…" oninput="renderMarketingGrid()"></div>
+            <div class="fld"><label>Type</label><select id="mktTypeFilter" onchange="renderMarketingGrid()">
+              <option value="">All</option><option value="image">Image</option><option value="video">Video</option><option value="poster">Poster</option><option value="caption">Caption only</option>
+            </select></div>
+            <div class="fld"><label>Platform</label><select id="mktPlatformFilter" onchange="renderMarketingGrid()"><option value="">All</option></select></div>
+            <div class="fld"><label>Campaign</label><select id="mktCampaignFilter" onchange="renderMarketingGrid()"><option value="">All</option></select></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-stats" id="mktStats" style="margin-bottom:16px;"></div>
+      <div id="marketingBulkBar" style="display:none;margin-bottom:10px;">
+        <div class="rail-card"><div class="rail-card-body" style="display:flex;align-items:center;gap:12px;padding:10px 16px;">
+          <span id="marketingBulkCount" style="font-size:12.5px;font-weight:600;"></span>
+          <button class="btn btn-ghost btn-sm" onclick="bulkExportSelectedMarketing()">⬇️ Export selected</button>
+          <button class="btn btn-danger btn-sm" onclick="bulkDeleteSelectedMarketing()">Delete selected</button>
+          <button class="btn btn-ghost btn-sm" onclick="clearMarketingSelection()">Clear</button>
+        </div></div>
+      </div>
+
+      <div class="grid" id="mktGrid" style="margin-bottom:20px;"></div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">📋 Campaign History</h3>
+          <p class="desc">Assets grouped by campaign — total reach and downloads per campaign.</p>
+          <div id="mktCampaignHistory"></div>
+        </div>
+      </div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">📱 Platform History</h3>
+          <p class="desc">Where your content has been posted, and how it performed.</p>
+          <div id="mktPlatformHistory"></div>
+        </div>
+      </div>
+
+      <div class="rail-card">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">Performance Analysis</h3>
+          <p class="desc">Based on assets currently matching your filters above.</p>
+          <div class="analysis-grid">
+            <div>
+              <div class="chart-label">Reach by Platform</div>
+              <div id="mktReachChartHolder"></div>
+            </div>
+            <div>
+              <div class="chart-label">Assets by Type</div>
+              <div id="mktTypeChartHolder"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORT BUILDER -->
+    <!-- COLD CALLING -->
+    <div id="viewColdcalling" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Cold Calling</h1>
+          <p class="shell-sub">Manual entry or bulk-import contacts, then call, log &amp; report — all from one place.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('coldcalling')">✨ AI Summary</button>
+          <button class="btn btn-primary btn-sm" onclick="openCallReportBuilder()">📋 Generate Call Report</button>
+        </div>
+      </div>
+
+      <div class="tabs" style="max-width:340px;">
+        <div class="tab active" id="ccTabManual" onclick="setCcTab('manual')">✍️ Manual</div>
+        <div class="tab" id="ccTabImport" onclick="setCcTab('import')">📥 Import Contacts</div>
+      </div>
+      <p class="fld-hint" style="margin:6px 0 0;">Both tabs feed the same contact list below — add manually or import, they show up together either way.</p>
+
+      <div class="glass-stats" id="ccStats" style="margin:14px 0 16px;"></div>
+
+      <!-- MANUAL -->
+      <div id="ccPaneManual">
+        <div class="rail-card" style="margin-bottom:16px;">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">📞 New Contact</h3>
+            <div class="fld"><label>Contact Name</label><input id="ccName" placeholder="Name"></div>
+            <div class="fld-row">
+              <div class="fld"><label>Category</label>
+                <select id="ccCategory"><option>Students/Parents</option><option>Counsellors/Parents</option><option>Youtubers</option><option>Friends/Relatives/Anonymous</option></select>
+              </div>
+              <div class="fld"><label>Phone</label><input id="ccPhone" placeholder="+91 XXXXX"></div>
+            </div>
+            <button class="btn btn-primary" onclick="addColdContact()">+ Add Contact</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- IMPORT -->
+      <div id="ccPaneImport" style="display:none;">
+        <div class="rail-card" style="margin-bottom:16px;">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">📥 Import Contacts</h3>
+            <p class="desc">Excel columns: Name, Phone, Category (optional).</p>
+            <input type="file" id="ccExcelInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleCcExcelImport(event)">
+            <div class="rp-actions">
+              <button class="btn btn-primary btn-sm" onclick="document.getElementById('ccExcelInput').click()">📊 Upload Excel</button>
+              <button class="btn btn-ghost btn-sm" onclick="importGoogleContacts()">🔵 Import from Google Contacts</button>
+            </div>
+            <div id="ccImportProgress" style="margin-top:12px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <input class="search-input" id="ccSearch" placeholder="Search by name or phone…" oninput="renderColdContacts()" style="margin-bottom:10px;">
+          <div id="ccContactsList"></div>
+        </div>
+      </div>
+
+      <div class="rail-card">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 10px;">Recent Call Logs</h3>
+          <div id="ccCallLogsList"></div>
+        </div>
+      </div>
+
+      <div class="rail-card">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">📄 Generate Call Report</h3>
+          <p class="desc">Choose what to include — works the same whether contacts came from Manual entry or Import.</p>
+          <div class="fld"><label>Category</label>
+            <select id="ccReportCategory"><option value="">All categories</option><option>Students/Parents</option><option>Counsellors/Parents</option><option>Youtubers</option><option>Friends/Relatives/Anonymous</option></select>
+          </div>
+          <div class="fld"><label>Outcome</label>
+            <select id="ccReportOutcome"><option value="">All outcomes</option><option>Interested</option><option>Not Interested</option><option>Follow-up Needed</option><option>No Answer</option><option>Wrong Number</option></select>
+          </div>
+          <div class="fld-row">
+            <div class="fld"><label>From date</label><input id="ccReportFrom" type="date"></div>
+            <div class="fld"><label>To date</label><input id="ccReportTo" type="date"></div>
+          </div>
+          <div class="rp-actions">
+            <button class="btn btn-primary btn-sm" onclick="downloadCallReport()">⬇️ Download Report</button>
+            <button class="btn btn-ghost btn-sm" onclick="shareCallReportWhatsApp()">💬 Share Summary</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COORDINATOR SHIFTS -->
+    <div id="viewCoordinator" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Coordinator Shifts</h1>
+          <p class="shell-sub">Staff shift check-in / check-out and duration tracking.</p>
+        </div>
+        <div class="view-header-actions">
+          <button class="btn btn-ghost btn-sm" onclick="generateSectionReport('coordinator')">✨ Report</button>
+          <button class="btn btn-ghost btn-sm" onclick="exportCoordinatorCsv()">⬇️ Export</button>
+        </div>
+      </div>
+
+      <div class="glass-stats" id="coordStats" style="margin-bottom:16px;"></div>
+
+      <div class="rail-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <h3 style="margin:0 0 4px;">🧑‍💼 New Shift Entry</h3>
+          <div class="fld"><label>Coordinator Name</label><input id="coordName" placeholder="Name"></div>
+          <div class="fld-row">
+            <div class="fld"><label>Date</label><input id="coordDate" type="date"></div>
+            <div class="fld"><label>Shift</label><select id="coordShift"><option>Morning</option><option>Afternoon</option><option>Evening</option><option>Night</option></select></div>
+          </div>
+          <div class="fld-row">
+            <div class="fld"><label>Check-in</label><input id="coordCheckIn" type="time"></div>
+            <div class="fld"><label>Check-out</label><input id="coordCheckOut" type="time"></div>
+          </div>
+          <div class="fld"><label>Notes</label><input id="coordNotes" placeholder="Optional"></div>
+          <button class="btn btn-primary" onclick="saveCoordinatorShift()">💾 Log Shift</button>
+        </div>
+      </div>
+
+      <div class="rail-card">
+        <div class="rail-card-body">
+          <input class="search-input" id="coordSearch" placeholder="Search by coordinator name…" oninput="renderCoordinatorShifts()" style="margin-bottom:10px;">
+          <div id="coordShiftsList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="viewReportbuilder" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">Report Builder</h1>
+          <p class="shell-sub">Pick what goes in, style it, then export in whatever format you need.</p>
+        </div>
+      </div>
+
+      <div class="results-layout">
+        <div class="rail-card" style="flex:1;min-width:280px;">
+          <div class="rail-card-body">
+            <div class="modal-section-head" style="border-top:none;padding-top:0;">Report info</div>
+            <div class="fld"><label>Report title</label><input id="rbTitle" placeholder="e.g. Monthly Summary — July 2026"></div>
+            <div class="fld-row">
+              <div class="fld"><label>Font</label>
+                <select id="rbFont">
+                  <option value="'Inter',sans-serif">Inter (default)</option>
+                  <option value="'Space Grotesk',sans-serif">Space Grotesk</option>
+                  <option value="Georgia,serif">Georgia (serif)</option>
+                  <option value="'Courier New',monospace">Courier (mono)</option>
+                </select>
+              </div>
+              <div class="fld"><label>Accent color</label><input id="rbColor" type="color" value="#2563eb"></div>
+            </div>
+            <div class="fld"><label>Footer note</label><input id="rbFooter" placeholder="e.g. Confidential — internal use only"></div>
+            <div class="fld-row">
+              <div class="fld"><label>Signed by</label><input id="rbSignName" placeholder="Name"></div>
+              <div class="fld"><label>Title / Designation</label><input id="rbSignTitle" placeholder="e.g. Principal"></div>
+            </div>
+
+            <div class="modal-section-head">Sections to include</div>
+            <div id="rbSectionChecks"></div>
+
+            <div class="modal-section-head">
+              Custom text blocks
+              <button type="button" class="btn btn-ghost btn-sm" style="width:auto;padding:3px 10px;" onclick="addCustomTextBlock()">+ Add block</button>
+            </div>
+            <div id="rbCustomBlocks"></div>
+
+            <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="generateReportAiSummary()">✨ Add AI Executive Summary</button>
+            <button class="btn btn-primary" style="margin-top:14px;" onclick="buildReportPreview()">🔄 Generate Preview</button>
+          </div>
+        </div>
+
+        <div class="rail-card" style="flex:1.4;min-width:320px;">
+          <div class="rail-card-body">
+            <div class="modal-section-head" style="border-top:none;padding-top:0;">Preview</div>
+            <div id="rbPreview" class="rb-preview-box"><div class="empty-hint">Choose sections and tap "Generate Preview".</div></div>
+            <div class="rp-actions" style="margin-top:14px;">
+              <button class="btn btn-primary btn-sm" onclick="exportReportPrint()">🖨️ Print / Save PDF</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportReportWord()">📄 Download Word</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportReportExcel()">📊 Download Excel</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportReportEmail()">✉️ Email</button>
+              <button class="btn btn-ghost btn-sm" onclick="exportReportWhatsApp()">💬 WhatsApp</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS / BRANDING -->
+    <!-- ADMIN PANEL -->
+    <div id="viewAdminpanel" style="display:none;">
+      <div class="view-header">
+        <div>
+          <h1 class="shell-title">🛡️ Admin Panel</h1>
+          <p class="shell-sub">Team access, permissions and organization-wide notices — all from one place.</p>
+        </div>
+      </div>
+
+      <div class="tabs" style="max-width:420px;">
+        <div class="tab active" id="apTabTeam" onclick="setAdminTab('team')">👥 Team</div>
+        <div class="tab" id="apTabPermissions" onclick="setAdminTab('permissions')">🔐 Permissions</div>
+        <div class="tab" id="apTabNotices" onclick="setAdminTab('notices')">📢 Notices</div>
+      </div>
+
+      <!-- TEAM -->
+      <div id="apPaneTeam" style="margin-top:14px;">
+        <div class="rail-card" style="margin-bottom:16px;">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">➕ Invite Team Member</h3>
+            <p class="desc">They'll join your organization automatically the first time they sign up or sign in with this email — no separate org setup needed on their end.</p>
+            <div id="apInviteMsg" class="msg"></div>
+            <div class="fld-row">
+              <div class="fld"><label>Name</label><input id="apInviteName" placeholder="Employee name"></div>
+              <div class="fld"><label>Email</label><input id="apInviteEmail" type="email" placeholder="employee@email.com"></div>
+            </div>
+            <div class="fld"><label>Role</label>
+              <select id="apInviteRole"><option value="staff">Staff</option><option value="manager">Manager</option><option value="admin">Admin</option><option value="viewer">Viewer (read-only)</option></select>
+            </div>
+            <button class="btn btn-primary" onclick="sendTeamInvite()">Send Invite</button>
+          </div>
+        </div>
+        <div class="rail-card">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 10px;">Team Members</h3>
+            <div id="apTeamList"><div class="empty-hint">Loading…</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PERMISSIONS -->
+      <div id="apPanePermissions" style="display:none;margin-top:14px;">
+        <div class="rail-card">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">🔐 Role Permissions</h3>
+            <p class="desc">Choose which modules each role can access. Owner always has full access.</p>
+            <div id="apPermMsg" class="msg"></div>
+            <div id="apPermGrid" style="overflow-x:auto;"></div>
+            <button class="btn btn-primary" style="margin-top:14px;" onclick="savePermissions()">💾 Save Permissions</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTICES -->
+      <div id="apPaneNotices" style="display:none;margin-top:14px;">
+        <div class="rail-card" style="margin-bottom:16px;">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 4px;">📢 New Notice</h3>
+            <div class="fld"><label>Title</label><input id="ntTitle" placeholder="Notice title"></div>
+            <div class="fld"><label>Message</label><textarea id="ntBody" class="ai-textarea" placeholder="Notice text…"></textarea></div>
+            <div class="fld-row">
+              <div class="fld"><label>Priority</label><select id="ntPriority"><option>Normal</option><option>Important</option><option>Urgent</option></select></div>
+              <div class="fld"><label>Target Audience</label>
+                <select id="ntAudience"><option value="">Everyone</option><option value="admin">Admins only</option><option value="staff">Staff only</option><option value="manager">Managers only</option></select>
+              </div>
+            </div>
+            <div class="fld">
+              <label>Attach Audio / Video (optional)</label>
+              <div class="rp-actions">
+                <button type="button" class="btn btn-ghost btn-sm" id="ntVoiceBtn" onclick="toggleNoticeVoiceRecording()">🎙️ Record Audio</button>
+                <input type="file" id="ntVideoInput" accept="video/*" style="display:none;" onchange="handleNoticeVideo(event)">
+                <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('ntVideoInput').click()">🎬 Upload Video</button>
+              </div>
+              <div id="ntMediaPreview" style="margin-top:8px;"></div>
+            </div>
+            <div class="fld"><label>Template Color</label><input type="color" id="ntColor" value="#2563eb" style="height:38px;width:70px;padding:2px;"></div>
+            <button class="btn btn-primary" onclick="publishNotice()">📢 Publish Notice</button>
+          </div>
+        </div>
+        <div class="rail-card">
+          <div class="rail-card-body">
+            <h3 style="margin:0 0 10px;">Published Notices</h3>
+            <div id="apNoticesList"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="viewSettings" style="display:none;">
+      <h1 class="shell-title">Settings</h1>
+      <p class="shell-sub">Manage your organization's identity — changes apply everywhere immediately.</p>
+
+      <div class="rail-card settings-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <h3>🎨 Branding</h3>
+          <p class="desc">This is what your login screen, header, and generated documents look like to your own team and (later) to the people you serve.</p>
+          <div id="brandMsg" class="msg"></div>
+
+          <div class="fld"><label>Organization display name</label><input id="bAppName"></div>
+          <div class="fld">
+            <label>Logo</label>
+            <div class="logo-upload-row">
+              <img class="logo-upload-preview" id="bLogoPreview" style="display:none;">
+              <input type="file" id="bLogoInput" accept="image/*" style="display:none;" onchange="handleLogoFile(event)">
+              <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('bLogoInput').click()">Choose logo image</button>
+            </div>
+          </div>
+          <div class="fld">
+            <label>Brand colors</label>
+            <div class="color-row">
+              <input type="color" id="bAccent" value="#2563eb">
+              <span class="fld-hint">Primary accent</span>
+              <input type="color" id="bSecondary" value="#7c3aed">
+              <span class="fld-hint">Secondary</span>
+            </div>
+          </div>
+          <button class="btn btn-primary" id="bSaveBtn" style="margin-top:8px;" onclick="saveBranding()">Save branding</button>
+        </div>
+      </div>
+
+      <div class="rail-card settings-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <h3>📄 Marksheet Template</h3>
+          <p class="desc">Every college has its own marksheet format. Customize it once — every downloaded/shared marksheet uses this template.</p>
+          <div id="msTemplateMsg" class="msg"></div>
+
+          <div class="fld"><label>Header text</label><input id="msHeaderText" placeholder="e.g. Your College Name"></div>
+          <div class="fld"><label>Statement title</label><input id="msTitleText" placeholder="STATEMENT OF MARKS"></div>
+          <div class="fld"><label>Footer note</label><input id="msFooterText" placeholder="e.g. This is a computer-generated statement."></div>
+          <div class="fld-row">
+            <div class="fld"><label>Font</label>
+              <select id="msFont">
+                <option value="'Inter',sans-serif">Inter (default)</option>
+                <option value="'Space Grotesk',sans-serif">Space Grotesk</option>
+                <option value="Georgia,serif">Georgia (serif)</option>
+                <option value="'Courier New',monospace">Courier (mono)</option>
+              </select>
+            </div>
+            <div class="fld"><label>Accent color</label><input id="msColor" type="color" value="#2563eb"></div>
+          </div>
+          <div class="fld">
+            <label>Watermark text (optional)</label>
+            <input id="msWatermark" placeholder="e.g. ORIGINAL — leave blank for none">
+          </div>
+          <button class="btn btn-primary" id="msSaveBtn" onclick="saveMarksheetTemplate()">Save template</button>
+        </div>
+      </div>
+
+      <div class="rail-card settings-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <h3>🧾 Fee Receipt Template</h3>
+          <p class="desc">Customize how fee receipts look — independent from the marksheet template.</p>
+          <div id="frTemplateMsg" class="msg"></div>
+          <div class="fld"><label>Header text</label><input id="frHeaderText" placeholder="e.g. Your College Name"></div>
+          <div class="fld"><label>Receipt title</label><input id="frTitleText" placeholder="FEE RECEIPT"></div>
+          <div class="fld"><label>Footer note</label><input id="frFooterText" placeholder="e.g. Thank you for your payment."></div>
+          <div class="fld-row">
+            <div class="fld"><label>Font</label>
+              <select id="frFont">
+                <option value="'Inter',sans-serif">Inter (default)</option>
+                <option value="'Space Grotesk',sans-serif">Space Grotesk</option>
+                <option value="Georgia,serif">Georgia (serif)</option>
+                <option value="'Courier New',monospace">Courier (mono)</option>
+              </select>
+            </div>
+            <div class="fld"><label>Accent color</label><input id="frColor" type="color" value="#2563eb"></div>
+          </div>
+          <button class="btn btn-primary" id="frSaveBtn" onclick="saveFeeReceiptTemplate()">Save template</button>
+        </div>
+      </div>
+
+      <div class="rail-card settings-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <h3>📜 Commitment Letter Template</h3>
+          <p class="desc">Customize the letter your college issues to admitted students. Use <code>{{name}}</code>, <code>{{course}}</code>, <code>{{batch}}</code>, <code>{{roll}}</code>, <code>{{date}}</code> as placeholders anywhere in the body — they'll be auto-filled per student.</p>
+          <div id="clTemplateMsg" class="msg"></div>
+          <div class="fld"><label>Header text</label><input id="clHeaderText" placeholder="e.g. Your College Name"></div>
+          <div class="fld"><label>Letter title</label><input id="clTitleText" placeholder="COMMITMENT LETTER"></div>
+          <div class="fld"><label>Body template</label>
+            <textarea id="clBodyTemplate" class="ai-textarea" style="min-height:140px;" placeholder="Dear {{name}},&#10;&#10;This is to confirm your admission into {{course}}, batch {{batch}}, with roll number {{roll}}.&#10;&#10;By signing below, you commit to abide by the institution's code of conduct...">Dear {{name}},
+
+This is to confirm your admission into {{course}}, batch {{batch}}, with roll number {{roll}}, effective {{date}}.
+
+By signing below, you commit to abide by the institution's code of conduct, academic policies, and attendance requirements throughout your enrollment.</textarea>
+          </div>
+          <div class="fld"><label>Footer note</label><input id="clFooterText" placeholder="e.g. This letter is system-generated and valid without a physical stamp."></div>
+          <div class="fld-row">
+            <div class="fld"><label>Font</label>
+              <select id="clFont">
+                <option value="'Inter',sans-serif">Inter (default)</option>
+                <option value="'Space Grotesk',sans-serif">Space Grotesk</option>
+                <option value="Georgia,serif">Georgia (serif)</option>
+                <option value="'Courier New',monospace">Courier (mono)</option>
+              </select>
+            </div>
+            <div class="fld"><label>Accent color</label><input id="clColor" type="color" value="#2563eb"></div>
+          </div>
+          <button class="btn btn-primary" id="clSaveBtn" onclick="saveCommitmentLetterTemplate()">Save template</button>
+        </div>
+      </div>
+
+      <div class="rail-card settings-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <h3>✨ AI Assistant (Gemini)</h3>
+          <p class="desc">One key, set once by an admin — every signed-in team member can then use the AI Assistant everywhere in the app. The key itself is never sent to anyone's browser; a server-side function handles every request.</p>
+          <div id="aiKeyMsg" class="msg"></div>
+          <div class="fld"><label>Gemini API key</label><input id="aiApiKey" type="password" placeholder="Paste your organization's Gemini API key"></div>
+          <p class="fld-hint" style="margin-bottom:10px;">Get a free key at <a href="https://aistudio.google.com" target="_blank" rel="noopener">aistudio.google.com</a> → Get API Key.</p>
+          <button class="btn btn-primary btn-sm" id="aiKeySaveBtn" onclick="saveGeminiKey()">Save key</button>
+        </div>
+      </div>
+
+      <div class="rail-card settings-card" style="margin-bottom:16px;">
+        <div class="rail-card-body">
+          <h3>☁️ Google Drive Backup</h3>
+          <p class="desc">Connect your own Google account to back up your organization's data as a JSON file in your Drive — only files this app creates are accessed, nothing else in your Drive is touched or even visible to it.</p>
+          <div id="driveMsg" class="msg"></div>
+          <div id="driveStatus" class="fld-hint" style="margin-bottom:10px;">Not connected.</div>
+          <button class="btn btn-primary btn-sm" id="driveConnectBtn" onclick="connectGoogleDrive()">Connect Google Drive</button>
+          <button class="btn btn-ghost btn-sm" id="driveBackupBtn" style="display:none;" onclick="backupToDrive()">☁️ Backup Now</button>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost" onclick="showDashboard()">← Back to dashboard</button>
+    </div>
+  </div>
+    </div>
+  </div>
+
+  <!-- GLOBAL AI ASSISTANT (floating, available on every screen) -->
+  <div class="ai-fab" id="aiFab" onclick="openAiPanel()">✨</div>
+  <div class="ai-panel" id="aiPanel">
+    <div class="ai-panel-head">
+      <h3>✨ AI Assistant</h3>
+      <span class="modal-close" onclick="closeAiPanel()">✕</span>
+    </div>
+    <div class="ai-modes" id="aiModes">
+      <span class="ai-mode-btn active" data-mode="summarize" onclick="setAiMode('summarize')">Summarize</span>
+      <span class="ai-mode-btn" data-mode="report" onclick="setAiMode('report')">Generate Report</span>
+      <span class="ai-mode-btn" data-mode="rewrite" onclick="setAiMode('rewrite')">Rewrite</span>
+      <span class="ai-mode-btn" data-mode="improve" onclick="setAiMode('improve')">Improve</span>
+      <span class="ai-mode-btn" data-mode="translate" onclick="setAiMode('translate')">Translate</span>
+      <span class="ai-mode-btn" data-mode="analyze" onclick="setAiMode('analyze')">Analyze</span>
+      <span class="ai-mode-btn" data-mode="suggest" onclick="setAiMode('suggest')">Suggest</span>
+    </div>
+    <div class="fld" id="aiTranslateLangWrap" style="display:none;">
+      <label>Translate to</label>
+      <input id="aiTranslateLang" placeholder="e.g. Hindi, Nepali, Spanish">
+    </div>
+    <textarea id="aiInput" class="ai-textarea" placeholder="Paste or type any text — a report, a note, marks summary, anything…"></textarea>
+    <div id="aiMsg" class="msg"></div>
+    <button class="btn btn-primary btn-sm" id="aiRunBtn" onclick="runAiAssist()">Run</button>
+    <div id="aiOutputWrap" style="display:none;">
+      <div class="ai-output-label">Result</div>
+      <div id="aiOutput" class="ai-output"></div>
+      <button class="btn btn-ghost btn-sm" onclick="copyAiOutput()">📋 Copy</button>
+    </div>
+  </div>
+</div>
+
+<!-- PERSON MODAL -->
+<div class="modal-overlay" id="personModal">
+  <div class="modal-card rail-card" style="max-width:560px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3 id="personModalTitle">Add person</h3>
+        <span class="modal-close" onclick="closeModal('personModal')">✕</span>
+      </div>
+      <div id="personMsg" class="msg"></div>
+      <input type="hidden" id="pId">
+      <div class="fld"><label id="pNameLabel">Full name</label><input id="pName"></div>
+      <div class="fld-row">
+        <div class="fld"><label>Email</label><input id="pEmail" type="email"></div>
+        <div class="fld"><label>Phone</label><input id="pPhone" type="tel"></div>
+      </div>
+      <div class="fld"><label>Status</label>
+        <select id="pStatus"><option value="active">Active</option><option value="inactive">Inactive</option><option value="archived">Archived</option></select>
+      </div>
+
+      <div class="modal-section-head" id="academicSectionHead">Academic identifiers</div>
+      <div class="fld-row">
+        <div class="fld"><label>Roll No</label><input id="pRollNo"></div>
+        <div class="fld"><label>Registration No</label><input id="pRegNo"></div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>University No</label><input id="pUniNo"></div>
+        <div class="fld"><label>Batch</label><input id="pBatch" placeholder="e.g. 2025"></div>
+      </div>
+      <div class="fld"><label>Category</label><input id="pCategory" placeholder="e.g. General, Foreigner, Reserved"></div>
+
+      <div class="modal-section-head">
+        Marks
+        <button type="button" class="btn btn-ghost btn-sm" style="width:auto;padding:3px 10px;" onclick="addMarksRow()">+ Subject</button>
+      </div>
+      <div class="marks-head" id="marksHead" style="display:none;"><span>Subject</span><span>Int</span><span>Ext</span><span>Max</span><span></span></div>
+      <div id="marksRows"></div>
+      <div class="marks-summary" id="marksSummary"></div>
+
+      <div class="modal-actions">
+        <button class="btn btn-danger btn-sm" id="pDeleteBtn" style="display:none;" onclick="deletePersonConfirm()">Delete</button>
+        <button class="btn btn-ghost btn-sm" id="pDupBtn" style="display:none;" onclick="duplicatePerson()">⧉ Duplicate</button>
+        <button class="btn btn-primary btn-sm" onclick="savePerson()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ACTIVITY MODAL -->
+<div class="modal-overlay" id="activityModal">
+  <div class="modal-card rail-card" style="max-width:540px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3 id="activityModalTitle">Add activity</h3>
+        <span class="modal-close" onclick="closeModal('activityModal')">✕</span>
+      </div>
+      <div id="activityMsg" class="msg"></div>
+      <input type="hidden" id="aId">
+      <div class="fld"><label>Title</label><input id="aTitle"></div>
+      <div class="fld"><label id="aPersonLabel">Person</label>
+        <select id="aPersonId"><option value="">— None —</option></select>
+      </div>
+      <div class="fld"><label>Stage</label><select id="aStage"></select></div>
+      <div class="fld"><label>Due date</label><input id="aDueDate" type="date"></div>
+      <div class="fld"><label>Notes</label><input id="aNotes"></div>
+
+      <div class="modal-section-head">📹 Virtual Meeting <span class="fld-hint" style="text-transform:none;font-weight:400;">(optional)</span></div>
+      <div class="fld-row">
+        <div class="fld"><label>Platform</label>
+          <select id="mPlatform" onchange="updateMeetingLaunchButton()">
+            <option value="meet">Google Meet</option>
+            <option value="zoom">Zoom</option>
+            <option value="teams">Microsoft Teams</option>
+          </select>
+        </div>
+        <div class="fld"><label>Meeting link</label><input id="mLink" placeholder="Paste meeting URL" oninput="updateMeetingLaunchButton()"></div>
+      </div>
+      <button type="button" class="btn btn-ghost btn-sm" id="mLaunchBtn" style="display:none;margin-bottom:10px;" onclick="launchMeeting()">🚀 Launch meeting</button>
+      <div class="fld"><label>Recording link (after the call)</label><input id="mRecording" placeholder="Paste recording URL"></div>
+      <div class="fld"><label>Meeting notes</label><textarea id="mNotes" class="ai-textarea" style="min-height:70px;" placeholder="What was discussed…"></textarea></div>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="generateMeetingSummary()">✨ AI Meeting Summary</button>
+      <div id="mSummaryWrap" style="display:none;margin-top:10px;">
+        <div class="ai-output-label">Summary &amp; follow-ups</div>
+        <div id="mSummaryOutput" class="ai-output"></div>
+        <div class="rp-actions">
+          <button type="button" class="btn btn-ghost btn-sm" onclick="shareMeetingWhatsApp()">💬 Share WhatsApp</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick="shareMeetingEmail()">✉️ Share Email</button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-danger btn-sm" id="aDeleteBtn" style="display:none;" onclick="deleteActivityConfirm()">Delete</button>
+        <button class="btn btn-ghost btn-sm" id="aDupBtn" style="display:none;" onclick="duplicateActivity()">⧉ Duplicate</button>
+        <button class="btn btn-primary btn-sm" onclick="saveActivity()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EXCEL UPLOAD MODAL -->
+<div class="modal-overlay" id="excelModal">
+  <div class="modal-card rail-card" style="max-width:520px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3>⬆️ Bulk upload marks from Excel</h3>
+        <span class="modal-close" onclick="closeModal('excelModal')">✕</span>
+      </div>
+      <p class="desc" style="margin-bottom:12px;">
+        First column <b>Roll No</b>, second column <b>Name</b>, then one column per subject (marks obtained) —
+        or two columns per subject named like <code>Physics Internal</code> / <code>Physics External</code>.
+      </p>
+      <div id="excelMsg" class="msg"></div>
+      <div class="fld">
+        <label>Default max marks per subject (used when only one mark column exists)</label>
+        <input id="excelDefaultMax" type="number" value="100">
+      </div>
+      <div class="fld">
+        <label><input type="checkbox" id="excelCreateMissing" checked style="width:auto;margin-right:6px;">Create a new student record for roll numbers not found</label>
+      </div>
+      <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleResultsExcelUpload(event)">
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('excelFileInput').click()">Choose Excel file…</button>
+      <div id="excelProgress" style="margin-top:14px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- COMMITMENT LETTER MODAL -->
+<div class="modal-overlay" id="commitmentLetterModal">
+  <div class="modal-card rail-card" style="max-width:600px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3>📜 Commitment Letter</h3>
+        <span class="modal-close" onclick="closeModal('commitmentLetterModal')">✕</span>
+      </div>
+      <div id="clMsg" class="msg"></div>
+      <div class="fld"><label>Letter body (edit before generating — placeholders already filled in)</label>
+        <textarea id="clPreviewBody" class="ai-textarea" style="min-height:180px;"></textarea>
+      </div>
+      <div class="rp-actions" style="margin-bottom:14px;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="aiDraftCommitmentLetter()">✨ AI Refine Wording</button>
+      </div>
+      <div class="modal-section-head" style="border-top:none;padding-top:0;">Student Signature (optional)</div>
+      <canvas id="clSignatureCanvas" width="500" height="120" style="border:1px solid var(--line);border-radius:8px;background:#fff;width:100%;touch-action:none;"></canvas>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:6px;" onclick="clClearSignature()">Clear signature</button>
+      <div class="rp-actions" style="margin-top:16px;">
+        <button class="btn btn-primary btn-sm" onclick="downloadCommitmentLetter()">⬇️ Download / Print</button>
+        <button class="btn btn-ghost btn-sm" onclick="shareCommitmentLetterWhatsApp()">💬 WhatsApp</button>
+        <button class="btn btn-ghost btn-sm" onclick="shareCommitmentLetterEmail()">✉️ Email</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONTACT 360 DASHBOARD MODAL -->
+<div class="modal-overlay" id="ccEditModal">
+  <div class="modal-card rail-card" style="max-width:560px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3 id="ccDashName">Contact Dashboard</h3>
+        <span class="modal-close" onclick="closeModal('ccEditModal')">✕</span>
+      </div>
+      <div id="ccEditMsg" class="msg"></div>
+      <input type="hidden" id="ccEditId">
+
+      <div class="modal-section-head" style="border-top:none;padding-top:0;">Basic Info</div>
+      <div class="fld"><label>Contact Name</label><input id="ccEditName"></div>
+      <div class="fld-row">
+        <div class="fld"><label>Category</label>
+          <select id="ccEditCategory"><option>Students/Parents</option><option>Counsellors/Parents</option><option>Youtubers</option><option>Friends/Relatives/Anonymous</option></select>
+        </div>
+        <div class="fld"><label>Phone</label><input id="ccEditPhone"></div>
+      </div>
+
+      <div class="modal-section-head">Lead Status</div>
+      <div class="tabs" id="ccLeadStatusTabs" style="max-width:100%;flex-wrap:wrap;">
+        <div class="tab" data-status="Hot" onclick="setLeadStatus('Hot')">🔥 Hot</div>
+        <div class="tab" data-status="Warm" onclick="setLeadStatus('Warm')">🌤️ Warm</div>
+        <div class="tab" data-status="Cold" onclick="setLeadStatus('Cold')">❄️ Cold</div>
+        <div class="tab" data-status="Interested" onclick="setLeadStatus('Interested')">👍 Interested</div>
+        <div class="tab" data-status="Not Interested" onclick="setLeadStatus('Not Interested')">👎 Not Interested</div>
+      </div>
+      <div class="fld" style="margin-top:10px;"><label>Next Follow-up Date</label><input id="ccFollowUpDate" type="date"></div>
+      <div class="fld"><label>Notes</label><textarea id="ccDashNotes" class="ai-textarea" style="min-height:70px;" placeholder="Persistent notes about this contact…"></textarea></div>
+      <div class="fld-row">
+        <div class="fld"><label>Social Media Link</label><input id="ccSocialLink" placeholder="Paste profile/post link"></div>
+        <div class="fld"><label>Meeting Link</label><input id="ccMeetingLink" placeholder="Meet/Zoom/Teams link"></div>
+      </div>
+
+      <div class="modal-section-head">
+        Gallery (images, video, files, voice notes)
+      </div>
+      <div class="rp-actions" style="margin-bottom:10px;">
+        <input type="file" id="ccGalleryInput" accept="image/*,video/*,.pdf,.doc,.docx" style="display:none;" onchange="handleContactGalleryUpload(event)">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('ccGalleryInput').click()">📎 Upload File</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="ccVoiceRecordBtn" onclick="toggleVoiceNoteRecording()">🎙️ Record Voice Note</button>
+      </div>
+      <div id="ccGalleryGrid" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;"></div>
+
+      <div class="modal-section-head">✉️ Compose WhatsApp Message</div>
+      <p class="fld-hint" style="margin-bottom:8px;">Text sends automatically. Voice notes/media in the gallery above must be attached manually inside WhatsApp once it opens (WhatsApp's own click-to-chat link only supports pre-filled text).</p>
+      <textarea id="ccWaMessage" class="ai-textarea" style="min-height:60px;" placeholder="Type your message — links/notes can be pulled in below"></textarea>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-bottom:14px;" onclick="prefillWaMessage()">✨ Pull in notes + links</button>
+      <button type="button" class="btn btn-primary" style="margin-bottom:14px;" onclick="sendContactWhatsApp()">💬 Send via WhatsApp</button>
+
+      <div class="modal-actions">
+        <button class="btn btn-danger btn-sm" onclick="deleteColdContact()">Delete</button>
+        <button class="btn btn-primary btn-sm" onclick="saveColdContactEdit()">💾 Save Dashboard</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CALL REPORT BUILDER MODAL -->
+<div class="modal-overlay" id="callReportModal">
+  <div class="modal-card rail-card" style="max-width:520px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3>📋 Generate Call Report</h3>
+        <span class="modal-close" onclick="closeModal('callReportModal')">✕</span>
+      </div>
+      <p class="desc">Choose which contacts to include — from Manual entries, Imported contacts, or both.</p>
+      <div class="fld-row">
+        <div class="fld"><label>Source</label>
+          <select id="crSourceFilter" onchange="renderCallReportSelection()">
+            <option value="">All (Manual + Imported)</option>
+            <option value="manual">Manual only</option>
+            <option value="imported">Imported only</option>
+          </select>
+        </div>
+        <div class="fld"><label>Only with calls logged?</label>
+          <select id="crOnlyCalledFilter" onchange="renderCallReportSelection()">
+            <option value="">Show all</option>
+            <option value="yes">Only called</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span class="fld-hint">Select contacts to include</span>
+        <button type="button" class="btn btn-ghost btn-sm" style="width:auto;" onclick="toggleSelectAllCallReport()">Select/Deselect all</button>
+      </div>
+      <div id="crSelectionList" style="max-height:280px;overflow-y:auto;border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 10px;margin-bottom:14px;"></div>
+      <div class="rp-actions">
+        <button class="btn btn-primary btn-sm" onclick="downloadCallReport()">⬇️ Download Report</button>
+        <button class="btn btn-ghost btn-sm" onclick="shareCallReportWhatsApp()">💬 WhatsApp Summary</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CALL SESSION MODAL -->
+<div class="modal-overlay" id="callSessionModal">
+  <div class="modal-card rail-card" style="max-width:460px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3 id="ccModalContactName">Call</h3>
+        <span class="modal-close" onclick="closeCallSessionModal()">✕</span>
+      </div>
+      <div id="ccTimerDisplay" style="text-align:center;font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;color:var(--accent);margin:10px 0 16px;">00:00</div>
+      <div style="display:flex;gap:10px;margin-bottom:16px;">
+        <a class="btn btn-ghost btn-sm" id="ccDialLink" href="tel:" style="text-decoration:none;flex:1;">📞 Dial</a>
+        <button class="btn btn-primary btn-sm" id="ccStartBtn" onclick="startCallTimer()" style="flex:1;">▶️ Start Call</button>
+        <button class="btn btn-danger btn-sm" id="ccEndBtn" onclick="endCallTimer()" style="flex:1;display:none;">⏹️ End Call</button>
+      </div>
+      <div id="ccLogFormWrap" style="display:none;">
+        <div class="fld"><label>Duration</label><input id="ccDurationDisplay" readonly></div>
+        <div class="fld"><label>Outcome</label>
+          <select id="ccOutcome"><option>Interested</option><option>Not Interested</option><option>Follow-up Needed</option><option>No Answer</option><option>Wrong Number</option></select>
+        </div>
+        <div class="fld">
+          <label>Notes <span style="cursor:pointer;" onclick="toggleVoiceToText('ccNotes')" id="ccMicBtn">🎤</span></label>
+          <textarea id="ccNotes" class="ai-textarea" placeholder="Call summary — type or use the mic…"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="saveCallLog()">💾 Save Call Log</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- EXPENSE MODAL -->
+<div class="modal-overlay" id="expenseModal">
+  <div class="modal-card rail-card" style="max-width:500px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3 id="expenseModalTitle">💰 Add Expense</h3>
+        <span class="modal-close" onclick="closeModal('expenseModal')">✕</span>
+      </div>
+      <div id="expenseMsg" class="msg"></div>
+      <input type="hidden" id="exId">
+      <div class="fld-row">
+        <div class="fld"><label>Date From</label><input id="exDateFrom" type="date"></div>
+        <div class="fld"><label>Date To</label><input id="exDateTo" type="date"></div>
+      </div>
+      <div class="fld"><label>Category</label>
+        <select id="exCategory"><option value="Travel">🚗 Travel</option><option value="Food">🍽️ Food</option><option value="Hotel">🏨 Hotel</option><option value="Media">📰 Media</option><option value="Other">📦 Other</option></select>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Amount *</label><input id="exAmount" type="number" placeholder="0.00"></div>
+        <div class="fld"><label>Currency</label><select id="exCurrency"><option value="NPR">₨ NPR</option><option value="INR">₹ INR</option><option value="USD">$ USD</option></select></div>
+      </div>
+      <div class="fld"><label>Payment Method</label>
+        <div class="tabs" style="max-width:100%;">
+          <div class="tab active" id="exPayCash" onclick="setExpensePayMethod('Cash')">💵 Cash</div>
+          <div class="tab" id="exPayUpi" onclick="setExpensePayMethod('UPI')">📲 UPI</div>
+          <div class="tab" id="exPayCard" onclick="setExpensePayMethod('Card')">💳 Card</div>
+          <div class="tab" id="exPayEsewa" onclick="setExpensePayMethod('eSewa')">🇳🇵 eSewa</div>
+        </div>
+      </div>
+      <div class="fld"><label>Purpose</label><input id="exPurpose" placeholder="What for?"></div>
+      <div class="fld"><label>Related Visitor</label><input id="exVisitor" placeholder="Visitor name (optional)"></div>
+      <div class="fld">
+        <label>Receipt / Bill Photo</label>
+        <input type="file" id="exReceiptInput" accept="image/*" style="display:none;" onchange="handleExpenseReceipt(event)">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('exReceiptInput').click()">📎 Attach Receipt</button>
+        <img id="exReceiptPreview" style="display:none;max-width:100%;max-height:130px;border-radius:8px;margin-top:8px;">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-danger btn-sm" id="exDeleteBtn" style="display:none;" onclick="deleteExpenseConfirm()">Delete</button>
+        <button class="btn btn-ghost btn-sm" id="exDupBtn" style="display:none;" onclick="duplicateExpense()">⧉ Duplicate</button>
+        <button class="btn btn-primary btn-sm" onclick="saveExpense()">💾 Save Expense</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- STUDENT CARE DETAIL MODAL -->
+<div class="modal-overlay" id="careDetailModal">
+  <div class="modal-card rail-card" style="max-width:480px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3 id="careDetailTitle">Record</h3>
+        <span class="modal-close" onclick="closeModal('careDetailModal')">✕</span>
+      </div>
+      <div id="careDetailBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ATTENDANCE EXCEL UPLOAD MODAL -->
+<div class="modal-overlay" id="attendanceUploadModal">
+  <div class="modal-card rail-card" style="max-width:480px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3>⬆️ Bulk upload attendance</h3>
+        <span class="modal-close" onclick="closeModal('attendanceUploadModal')">✕</span>
+      </div>
+      <p class="desc" style="margin-bottom:12px;">First column <b>Roll No</b>, second column <b>Status</b> (P / A / L — Present/Absent/Late). Applies to the date selected on the Attendance page.</p>
+      <div id="attUploadMsg" class="msg"></div>
+      <input type="file" id="attUploadInput" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleAttendanceExcel(event)">
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('attUploadInput').click()">Choose Excel file…</button>
+      <div id="attUploadProgress" style="margin-top:14px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- FEE RECORD MODAL -->
+<div class="modal-overlay" id="feeModal">
+  <div class="modal-card rail-card" style="max-width:520px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3 id="feeModalTitle">Add fee record</h3>
+        <span class="modal-close" onclick="closeModal('feeModal')">✕</span>
+      </div>
+      <div id="feeMsg" class="msg"></div>
+      <input type="hidden" id="fId">
+      <div class="fld"><label>Student</label>
+        <select id="fPersonId"></select>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Fee category</label><input id="fCategory" placeholder="e.g. Tuition, Hostel"></div>
+        <div class="fld"><label>Total fees</label><input id="fTotal" type="number"></div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Currency</label>
+          <select id="fCurrency"><option value="NPR">₨ NPR</option><option value="INR">₹ INR</option><option value="USD">$ USD</option></select>
+        </div>
+        <div class="fld"><label>Due date</label><input id="fDueDate" type="date"></div>
+      </div>
+      <div class="fld-row">
+        <div class="fld"><label>Fine (if any)</label><input id="fFine" type="number" value="0"></div>
+        <div class="fld"></div>
+      </div>
+      <div class="fld"><label>Remarks</label><input id="fRemarks"></div>
+
+      <div class="modal-section-head">
+        Installments (optional)
+        <button type="button" class="btn btn-ghost btn-sm" style="width:auto;padding:3px 10px;" onclick="addInstallmentRow()">+ Installment</button>
+      </div>
+      <div class="marks-head" id="installmentsHead" style="display:none;grid-template-columns:1fr 1fr 28px;"><span>Label</span><span>Amount</span><span></span></div>
+      <div id="installmentsRows"></div>
+
+      <div class="modal-actions">
+        <button class="btn btn-danger btn-sm" id="fDeleteBtn" style="display:none;" onclick="deleteFeeConfirm()">Delete</button>
+        <button class="btn btn-ghost btn-sm" id="fDupBtn" style="display:none;" onclick="duplicateFee()">⧉ Duplicate</button>
+        <button class="btn btn-primary btn-sm" onclick="saveFee()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RECORD PAYMENT MODAL -->
+<div class="modal-overlay" id="paymentModal">
+  <div class="modal-card rail-card">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3>Record payment</h3>
+        <span class="modal-close" onclick="closeModal('paymentModal')">✕</span>
+      </div>
+      <div id="paymentMsg" class="msg"></div>
+      <input type="hidden" id="payFeeId">
+      <div class="fld"><label>Amount received</label><input id="payAmount" type="number"></div>
+      <div class="fld"><label>Date</label><input id="payDate" type="date"></div>
+      <div class="fld"><label>Method</label>
+        <select id="payMethod"><option>Cash</option><option>Bank Transfer</option><option>Card</option><option>Online</option><option>Cheque</option></select>
+      </div>
+      <div class="fld"><label>Receipt No / Note</label><input id="payNote"></div>
+      <div class="modal-actions">
+        <button class="btn btn-primary btn-sm" onclick="recordPayment()">Save payment</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LIBRARY ENTRY MODAL -->
+<div class="modal-overlay" id="libraryModal">
+  <div class="modal-card rail-card" style="max-width:520px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3 id="libModalTitle">Add library entry</h3>
+        <span class="modal-close" onclick="closeModal('libraryModal')">✕</span>
+      </div>
+      <div id="libMsg" class="msg"></div>
+      <input type="hidden" id="lId">
+
+      <div class="photo-drop" id="libPhotoDrop" onclick="document.getElementById('libPhotoInput').click()">
+        📷 Tap to upload a photo of the register page — AI will try to read Serial No, Name, In/Out time
+        <input type="file" id="libPhotoInput" accept="image/*" style="display:none;" onchange="handleLibraryPhoto(event)">
+        <div id="libPhotoPreviewWrap" style="display:none;"><img id="libPhotoPreview"></div>
+      </div>
+      <div id="libExtractStatus" class="empty-hint" style="display:none;margin-bottom:10px;"></div>
+
+      <div class="fld"><label>Serial No</label><input id="lSerial"></div>
+      <div class="fld"><label>Person</label><select id="lPersonId"></select></div>
+      <div class="fld-row">
+        <div class="fld"><label>In time</label><input id="lInTime" type="time"></div>
+        <div class="fld"><label>Out time</label><input id="lOutTime" type="time"></div>
+      </div>
+      <div class="fld"><label>Date</label><input id="lDate" type="date"></div>
+
+      <div class="fld">
+        <label>Signature</label>
+        <div class="sig-pad-wrap"><canvas id="sigCanvas"></canvas></div>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="clearSignature()">Clear signature</button>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-danger btn-sm" id="lDeleteBtn" style="display:none;" onclick="deleteLibraryConfirm()">Delete</button>
+        <button class="btn btn-ghost btn-sm" id="lDupBtn" style="display:none;" onclick="duplicateLibraryEntry()">⧉ Duplicate</button>
+        <button class="btn btn-primary btn-sm" onclick="saveLibraryEntry()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MARKETING ASSET MODAL -->
+<div class="modal-overlay" id="marketingModal">
+  <div class="modal-card rail-card" style="max-width:540px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3 id="mktModalTitle">Add marketing asset</h3>
+        <span class="modal-close" onclick="closeModal('marketingModal')">✕</span>
+      </div>
+      <div id="mktMsg" class="msg"></div>
+      <input type="hidden" id="mkId">
+      <div class="fld-row">
+        <div class="fld"><label>Asset type</label>
+          <select id="mkType" onchange="toggleMarketingMediaFields()"><option value="image">Image</option><option value="video">Video</option><option value="poster">Poster</option><option value="caption">Caption only</option></select>
+        </div>
+        <div class="fld"><label>Platform / Channel</label>
+          <select id="mkPlatform">
+            <option>Instagram</option><option>Facebook</option><option>WhatsApp Status</option><option>YouTube</option>
+            <option>Google Business</option><option>Physical — Banner</option><option>Physical — Pamphlet</option><option>Physical — Hoarding</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="fld"><label>Campaign name</label><input id="mkCampaign" placeholder="e.g. Admission Drive 2026"></div>
+
+      <div class="fld" id="mkMediaFieldWrap">
+        <label>Media (image/poster)</label>
+        <input type="file" id="mkMediaInput" accept="image/*" style="display:none;" onchange="handleMarketingMedia(event)">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('mkMediaInput').click()">📎 Choose image</button>
+        <img id="mkMediaPreview" style="display:none;max-width:100%;max-height:140px;border-radius:8px;margin-top:8px;">
+      </div>
+      <div class="fld" id="mkVideoLinkWrap">
+        <label>Link (post URL / video / social profile)</label><input id="mkVideoLink" placeholder="https://…">
+      </div>
+
+      <div class="fld">
+        <label>Caption / Text</label>
+        <textarea id="mkCaption" class="ai-textarea" style="min-height:70px;" placeholder="Write your caption, or generate one with AI below…"></textarea>
+      </div>
+      <div class="rp-actions" style="margin-bottom:10px;">
+        <button type="button" class="btn btn-ghost btn-sm" onclick="generateMarketingCaption()">✨ AI Caption</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="generateMarketingHashtags()">✨ AI Hashtags</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="generateMarketingIdea()">✨ AI Content Idea</button>
+      </div>
+      <div class="fld"><label>Hashtags</label><input id="mkHashtags" placeholder="#college #admissions2026"></div>
+
+      <div class="fld-row">
+        <div class="fld"><label>Posted date</label><input id="mkDate" type="date"></div>
+        <div class="fld"><label>Reach</label><input id="mkReach" type="number" value="0"></div>
+      </div>
+      <div class="fld"><label>Downloads / Shares</label><input id="mkDownloads" type="number" value="0"></div>
+      <div class="fld"><label>Notes</label><input id="mkNotes"></div>
+
+      <div class="modal-actions">
+        <button class="btn btn-danger btn-sm" id="mkDeleteBtn" style="display:none;" onclick="deleteMarketingConfirm()">Delete</button>
+        <button class="btn btn-ghost btn-sm" id="mkDupBtn" style="display:none;" onclick="duplicateMarketingAsset()">⧉ Duplicate</button>
+        <button class="btn btn-primary btn-sm" onclick="saveMarketingAsset()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MARKETING ASSET DETAIL MODAL -->
+<div class="modal-overlay" id="marketingDetailModal">
+  <div class="modal-card rail-card" style="max-width:480px;">
+    <div class="rail-card-body">
+      <div class="modal-head">
+        <h3>Asset details</h3>
+        <span class="modal-close" onclick="closeModal('marketingDetailModal')">✕</span>
+      </div>
+      <div id="mktDetailBody"></div>
+    </div>
+  </div>
+</div>
+
+<div id="printArea" class="print-only"></div>
+
+<!-- GLOBAL SEARCH (command palette) -->
+<div class="gsearch-overlay" id="gsearchOverlay" onclick="if(event.target===this)closeGlobalSearch()">
+  <div class="gsearch-box">
+    <div class="gsearch-input-row">
+      <span style="font-size:18px;">🔎</span>
+      <input id="gsearchInput" placeholder="Search people, fees, results, contacts, everything…" oninput="runGlobalSearch()" onkeydown="handleGlobalSearchKey(event)">
+      <span class="gsearch-esc" onclick="closeGlobalSearch()">ESC</span>
+    </div>
+    <div id="gsearchResults" class="gsearch-results"></div>
+    <div class="gsearch-footer">↑↓ navigate · ↵ select · <b>Ctrl+K</b> to reopen</div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
